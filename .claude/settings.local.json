@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(cat:*)",
+      "WebSearch",
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(dpkg:*)",
+      "Bash(ros2 --version:*)",
+      "Bash(echo:*)",
+      "Bash(source:*)",
+      "Bash(apt-cache search:*)",
+      "Bash(sudo apt update:*)",
+      "Bash(test:*)",
+      "Bash(bun:*)",
+      "Bash(ros2 pkg list:*)",
+      "Bash(~/.bun/bin/bun:*)",
+      "Bash(export TURTLEBOT3_MODEL=burger)",
+      "Bash(colcon build:*)",
+      "Bash(/usr/bin/colcon:*)",
+      "Bash(ros2 launch:*)",
+      "Bash(du:*)",
+      "Bash(wc:*)",
+      "Bash(git -C /home/noob/ros2_navigation_project log --oneline --all)",
+      "Bash(git -C /home/noob/ros2_navigation_project diff --stat HEAD)"
+    ]
+  },
+  "outputStyle": "Explanatory"
+}
