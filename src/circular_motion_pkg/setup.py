@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-	'circular_motion = circular_motion_pkg.circular_motion:main',
+            'circular_motion = circular_motion_pkg.circular_motion:main',
+            'ros_bridge_server = circular_motion_pkg.ros_bridge_server:main',
         ],
     },
 )
