@@ -9,9 +9,14 @@ class RosService {
     this.ros = new ROSLIB.Ros({});
   }
 
-  connect(url: string = 'ws://localhost:9090'): Promise<boolean> {
+  connect(url?: string): Promise<boolean> {
+    // If no URL is provided, construct one using the current hostname
+    const connectionUrl = url || `ws://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:9090`;
+    
     return new Promise((resolve, reject) => {
-      this.ros.connect(url);
+      this.ros.connect(connectionUrl);
+
+      console.log('Attempting to connect to ROS bridge at:', connectionUrl);
 
       this.ros.on('connection', () => {
         console.log('Connected to ROS bridge server');
@@ -107,9 +112,9 @@ class RosService {
 
       const serviceRequest = new ROSLIB.ServiceRequest(request);
 
-      service.callService(serviceRequest, (result) => {
+      service.callService(serviceRequest, (result: any) => {
         resolve(result);
-      }, (error) => {
+      }, (error: any) => {
         reject(error);
       });
     });
@@ -117,19 +122,34 @@ class RosService {
 
   // Set values for circular motion
   setCircularMotion(linearSpeed: number, angularSpeed: number, active: boolean = true): void {
-    // Publish linear speed
-    this.publish('/turtle1/linear_speed', 'std_msgs/Float32', { data: linearSpeed });
-    
-    // Publish angular speed
-    this.publish('/turtle1/angular_speed', 'std_msgs/Float32', { data: angularSpeed });
-    
-    // Publish motion active state
-    this.publish('/turtle1/motion_active', 'std_msgs/Bool', { data: active });
+    if (!active) {
+      // If not active, publish zero velocities to stop the turtle
+      this.publish('/turtle1/cmd_vel', 'geometry_msgs/msg/Twist', {
+        linear: { x: 0.0, y: 0.0, z: 0.0 },
+        angular: { x: 0.0, y: 0.0, z: 0.0 },
+      });
+      return;
+    }
+
+    const twist = {
+      linear: {
+        x: linearSpeed,
+        y: 0.0,
+        z: 0.0,
+      },
+      angular: {
+        x: 0.0,
+        y: 0.0,
+        z: angularSpeed,
+      },
+    };
+
+    this.publish('/turtle1/cmd_vel', 'geometry_msgs/msg/Twist', twist);
   }
-  
-  // Stop motion
+
+  // Stop motion by publishing zero velocities
   stopMotion(): void {
-    this.publish('/turtle1/motion_active', 'std_msgs/Bool', { data: false });
+    this.setCircularMotion(0, 0, false);
   }
 }
 

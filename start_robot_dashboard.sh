@@ -33,6 +33,29 @@ fi
 echo -e "${YELLOW}Sourcing the workspace...${NC}"
 source install/setup.bash
 
+# Kill any existing rosbridge_server processes
+echo -e "${YELLOW}Checking for existing rosbridge processes...${NC}"
+if pgrep -f "rosbridge_websocket" > /dev/null; then
+  echo -e "${YELLOW}Found existing rosbridge processes. Terminating...${NC}"
+  sudo fuser -k 9090/tcp || true
+  pkill -f "rosbridge_websocket" || true
+  sleep 2
+fi
+
+# Kill any existing turtlesim processes
+if pgrep -f "turtlesim_node" > /dev/null; then
+  echo -e "${YELLOW}Found existing turtlesim processes. Terminating...${NC}"
+  pkill -f "turtlesim_node" || true
+  sleep 2
+fi
+
+# Kill any existing bridge server processes
+if pgrep -f "ros_bridge_server" > /dev/null; then
+  echo -e "${YELLOW}Found existing bridge server processes. Terminating...${NC}"
+  pkill -f "ros_bridge_server" || true
+  sleep 2
+fi
+
 # Start rosbridge in background
 echo -e "${YELLOW}Starting ROS Bridge server...${NC}"
 ros2 launch rosbridge_server rosbridge_websocket_launch.xml &
@@ -51,20 +74,27 @@ TURTLESIM_PID=$!
 sleep 2
 echo -e "${GREEN}Turtlesim started with PID: ${TURTLESIM_PID}${NC}"
 
-# Start the ROS Bridge server node in background
-echo -e "${YELLOW}Starting ROS Bridge server node...${NC}"
-ros2 run circular_motion_pkg ros_bridge_server &
-BRIDGE_SERVER_PID=$!
-
-# Wait for the bridge server to start
-sleep 2
-echo -e "${GREEN}ROS Bridge server node started with PID: ${BRIDGE_SERVER_PID}${NC}"
+# No custom bridge node needed; we publish Twist directly from the dashboard
 
 # Start the web application
 echo -e "${YELLOW}Starting web application...${NC}"
 cd project
-bun run dev &
-WEB_PID=$!
+
+# Check if bun is installed, otherwise use npm
+if command -v bun &> /dev/null; then
+  echo -e "${GREEN}Using bun to run dev server${NC}"
+  bun run dev &
+  WEB_PID=$!
+elif command -v npm &> /dev/null; then
+  echo -e "${YELLOW}Bun not found, using npm instead${NC}"
+  npm run dev &
+  WEB_PID=$!
+else
+  echo -e "${RED}Neither bun nor npm found. Please install one of them to run the web application.${NC}"
+  # Clean up other processes
+  kill $TURTLESIM_PID $ROSBRIDGE_PID 2>/dev/null || true
+  exit 1
+fi
 
 echo -e "${GREEN}Web application started with PID: ${WEB_PID}${NC}"
 echo
@@ -76,7 +106,7 @@ echo -e "${YELLOW}Press Ctrl+C to stop all components${NC}"
 # Function to cleanup on exit
 cleanup() {
   echo -e "\n${YELLOW}Shutting down all components...${NC}"
-  kill $WEB_PID $BRIDGE_SERVER_PID $TURTLESIM_PID $ROSBRIDGE_PID 2>/dev/null || true
+  kill $WEB_PID $TURTLESIM_PID $ROSBRIDGE_PID 2>/dev/null || true
   echo -e "${GREEN}All components stopped${NC}"
   exit 0
 }

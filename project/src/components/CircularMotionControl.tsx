@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import rosService from '../services/RosService';
 
 interface CircularMotionControlProps {
@@ -12,6 +12,7 @@ export const CircularMotionControl: React.FC<CircularMotionControlProps> = ({
   const [linearSpeed, setLinearSpeed] = useState(2.0);
   const [angularSpeed, setAngularSpeed] = useState(1.0);
   const [isMoving, setIsMoving] = useState(false);
+  const publishTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Try to connect to ROS on component mount
@@ -19,10 +20,8 @@ export const CircularMotionControl: React.FC<CircularMotionControlProps> = ({
     
     // Cleanup on unmount
     return () => {
+      stopPublishing();
       if (connected) {
-        if (isMoving) {
-          rosService.stopMotion();
-        }
         rosService.disconnect();
       }
     };
@@ -38,20 +37,34 @@ export const CircularMotionControl: React.FC<CircularMotionControlProps> = ({
     }
   };
 
+  const startPublishing = () => {
+    rosService.setCircularMotion(linearSpeed, angularSpeed, true);
+    publishTimer.current = setInterval(() => {
+      rosService.setCircularMotion(linearSpeed, angularSpeed, true);
+    }, 100);
+  };
+
+  const stopPublishing = () => {
+    if (publishTimer.current) {
+      clearInterval(publishTimer.current);
+      publishTimer.current = null;
+    }
+    rosService.stopMotion();
+  };
+
   const handleStart = () => {
     if (!connected) {
       connectToROS();
       return;
     }
 
-    rosService.setCircularMotion(linearSpeed, angularSpeed, true);
+    startPublishing();
     setIsMoving(true);
   };
 
   const handleStop = () => {
     if (!connected) return;
-    
-    rosService.stopMotion();
+    stopPublishing();
     setIsMoving(false);
   };
 
@@ -74,7 +87,7 @@ export const CircularMotionControl: React.FC<CircularMotionControlProps> = ({
   };
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-md">
+    <div className="panel p-4">
       <h2 className="text-xl font-bold mb-4">{title}</h2>
       
       <div className="mb-4">
@@ -119,10 +132,10 @@ export const CircularMotionControl: React.FC<CircularMotionControlProps> = ({
         <button
           onClick={handleStart}
           disabled={isMoving}
-          className={`px-4 py-2 rounded-md ${
+          className={`btn ${
             isMoving
-              ? 'bg-gray-300 cursor-not-allowed'
-              : 'bg-green-500 hover:bg-green-600 text-white'
+              ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+              : 'btn-success'
           }`}
         >
           Start
@@ -130,10 +143,10 @@ export const CircularMotionControl: React.FC<CircularMotionControlProps> = ({
         <button
           onClick={handleStop}
           disabled={!isMoving}
-          className={`px-4 py-2 rounded-md ${
+          className={`btn ${
             !isMoving
-              ? 'bg-gray-300 cursor-not-allowed'
-              : 'bg-red-500 hover:bg-red-600 text-white'
+              ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+              : 'btn-danger'
           }`}
         >
           Stop
@@ -141,9 +154,9 @@ export const CircularMotionControl: React.FC<CircularMotionControlProps> = ({
       </div>
       
       <div className="mt-4 text-center">
-        <span className={`inline-flex items-center ${connected ? 'text-green-500' : 'text-red-500'}`}>
+        <span className={`inline-flex items-center ${connected ? 'text-green-400' : 'text-red-400'}`}>
           {connected ? 'Connected to ROS' : 'Disconnected from ROS'}
-          <span className={`ml-2 h-3 w-3 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`}></span>
+          <span className={`ml-2 h-3 w-3 rounded-full ${connected ? 'bg-green-400' : 'bg-red-400'}`}></span>
         </span>
       </div>
     </div>
