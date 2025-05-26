@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
-import { BrainCircuit, Menu, Mic, Navigation, Settings, X, Circle } from 'lucide-react';
+import { BrainCircuit, Menu, Mic, Navigation, Settings, X, Circle, Globe } from 'lucide-react';
 import { useState } from 'react';
+import { turtleControlService } from '../services/TurtleControlService';
 
 interface LayoutProps {
   children: ReactNode;
@@ -14,6 +15,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, onPageChange, currentP
   
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Navigation },
+    { id: 'services', label: 'Services', icon: Globe },
     { id: 'speech', label: 'Speech Processing', icon: Mic },
     { id: 'memory', label: 'Memory Management', icon: BrainCircuit },
     { id: 'command', label: 'Command Control', icon: BrainCircuit },
@@ -107,15 +109,20 @@ export const Layout: React.FC<LayoutProps> = ({ children, onPageChange, currentP
               <Circle className={`h-3 w-3 ${getStatusColor()}`} fill="currentColor" />
               <span className="text-sm font-medium">System {systemStatus.charAt(0).toUpperCase() + systemStatus.slice(1)}</span>
             </div>
-            <button 
-              onClick={() => setSystemStatus(systemStatus === 'online' ? 'offline' : 'online')}
-              className={`px-3 py-1.5 rounded-md transition-colors ${
-                systemStatus === 'online' 
-                  ? 'bg-red-600 hover:bg-red-700'
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+            <button
+              onClick={() => {
+                if (window.confirm('Are you sure you want to shutdown the application?')) {
+                  try {
+                    turtleControlService.destroy();
+                  } catch (e) {}
+                  if (window.close) window.close();
+                  window.location.href = 'about:blank';
+                }
+              }}
+              className="px-3 py-1.5 rounded-md bg-red-700 hover:bg-red-800 transition-colors font-bold"
+              title="Shutdown the application"
             >
-              {getConnectButtonText()}
+              Shutdown
             </button>
           </div>
         </header>
