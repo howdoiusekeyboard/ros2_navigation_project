@@ -5,12 +5,6 @@
  * velocities for circular motion, but it can be extended easily.
  */
 
-// Minimal type so we don't pull entire OpenAI client as a dependency
-type ChatCompletionMessageParam = {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-};
-
 export interface ParsedMotionCommand {
   action: 'start' | 'stop';
   linear?: number;
