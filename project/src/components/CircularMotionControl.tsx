@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { turtleControlService, type TurtleState } from '../services/TurtleControlService';
+import React, { useState, useEffect, useRef } from 'react';
+import rosService from '../services/RosService';
 
 interface CircularMotionControlProps {
   title?: string;
@@ -8,37 +8,82 @@ interface CircularMotionControlProps {
 export const CircularMotionControl: React.FC<CircularMotionControlProps> = ({
   title = 'Circular Motion Control'
 }) => {
-  const [state, setState] = useState<TurtleState>(turtleControlService.getState());
+  const [connected, setConnected] = useState(false);
+  const [linearSpeed, setLinearSpeed] = useState(2.0);
+  const [angularSpeed, setAngularSpeed] = useState(1.0);
+  const [isMoving, setIsMoving] = useState(false);
+  const publishTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Subscribe to state changes from the centralized service
-    const unsubscribe = turtleControlService.onStateChange(setState);
+    // Try to connect to ROS on component mount
+    connectToROS();
     
-    // Cleanup subscription on unmount
-    return unsubscribe;
+    // Cleanup on unmount
+    return () => {
+      stopPublishing();
+      if (connected) {
+        rosService.disconnect();
+      }
+    };
   }, []);
 
+  const connectToROS = async () => {
+    try {
+      const result = await rosService.connect();
+      setConnected(result);
+    } catch (error) {
+      console.error('Failed to connect to ROS:', error);
+      setConnected(false);
+    }
+  };
+
+  const startPublishing = () => {
+    rosService.setCircularMotion(linearSpeed, angularSpeed, true);
+    publishTimer.current = setInterval(() => {
+      rosService.setCircularMotion(linearSpeed, angularSpeed, true);
+    }, 100);
+  };
+
+  const stopPublishing = () => {
+    if (publishTimer.current) {
+      clearInterval(publishTimer.current);
+      publishTimer.current = null;
+    }
+    rosService.stopMotion();
+  };
+
   const handleStart = () => {
-    if (!state.connected) {
-      turtleControlService.reconnect();
+    if (!connected) {
+      connectToROS();
       return;
     }
 
-    turtleControlService.start('manual');
+    startPublishing();
+    setIsMoving(true);
   };
 
   const handleStop = () => {
-    turtleControlService.stop('manual');
+    if (!connected) return;
+    stopPublishing();
+    setIsMoving(false);
   };
 
   const handleLinearSpeedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
-    turtleControlService.setSpeed(value, state.angularSpeed, 'slider');
+    setLinearSpeed(value);
+    
+    if (isMoving) {
+      rosService.setCircularMotion(value, angularSpeed, true);
+    }
   };
 
   const handleAngularSpeedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
-    turtleControlService.setSpeed(state.linearSpeed, value, 'slider');
+    setAngularSpeed(value);
+    
+    if (isMoving) {
+      rosService.setCircularMotion(linearSpeed, value, true);
+    }
   };
 
   return (
@@ -48,7 +93,7 @@ export const CircularMotionControl: React.FC<CircularMotionControlProps> = ({
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <label htmlFor="linearSpeed" className="font-medium">
-            Linear Speed: {state.linearSpeed.toFixed(1)}
+            Linear Speed: {linearSpeed.toFixed(1)}
           </label>
           <span className="text-sm text-gray-500">m/s</span>
         </div>
@@ -58,7 +103,7 @@ export const CircularMotionControl: React.FC<CircularMotionControlProps> = ({
           min="0"
           max="5"
           step="0.1"
-          value={state.linearSpeed}
+          value={linearSpeed}
           onChange={handleLinearSpeedChange}
           className="w-full"
         />
@@ -67,7 +112,7 @@ export const CircularMotionControl: React.FC<CircularMotionControlProps> = ({
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
           <label htmlFor="angularSpeed" className="font-medium">
-            Angular Speed: {state.angularSpeed.toFixed(1)}
+            Angular Speed: {angularSpeed.toFixed(1)}
           </label>
           <span className="text-sm text-gray-500">rad/s</span>
         </div>
@@ -77,7 +122,7 @@ export const CircularMotionControl: React.FC<CircularMotionControlProps> = ({
           min="-3"
           max="3"
           step="0.1"
-          value={state.angularSpeed}
+          value={angularSpeed}
           onChange={handleAngularSpeedChange}
           className="w-full"
         />
@@ -86,9 +131,9 @@ export const CircularMotionControl: React.FC<CircularMotionControlProps> = ({
       <div className="flex justify-between">
         <button
           onClick={handleStart}
-          disabled={state.isMoving}
+          disabled={isMoving}
           className={`btn ${
-            state.isMoving
+            isMoving
               ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
               : 'btn-success'
           }`}
@@ -97,9 +142,9 @@ export const CircularMotionControl: React.FC<CircularMotionControlProps> = ({
         </button>
         <button
           onClick={handleStop}
-          disabled={!state.isMoving}
+          disabled={!isMoving}
           className={`btn ${
-            !state.isMoving
+            !isMoving
               ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
               : 'btn-danger'
           }`}
@@ -109,9 +154,9 @@ export const CircularMotionControl: React.FC<CircularMotionControlProps> = ({
       </div>
       
       <div className="mt-4 text-center">
-        <span className={`inline-flex items-center ${state.connected ? 'text-green-400' : 'text-red-400'}`}>
-          {state.connected ? 'Connected to ROS' : 'Disconnected from ROS'}
-          <span className={`ml-2 h-3 w-3 rounded-full ${state.connected ? 'bg-green-400' : 'bg-red-400'}`}></span>
+        <span className={`inline-flex items-center ${connected ? 'text-green-400' : 'text-red-400'}`}>
+          {connected ? 'Connected to ROS' : 'Disconnected from ROS'}
+          <span className={`ml-2 h-3 w-3 rounded-full ${connected ? 'bg-green-400' : 'bg-red-400'}`}></span>
         </span>
       </div>
     </div>
