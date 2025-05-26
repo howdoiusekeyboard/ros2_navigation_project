@@ -32,7 +32,6 @@ export const CommandInput: React.FC = () => {
   const [command, setCommand] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isTypingFromVoice, setIsTypingFromVoice] = useState(false);
-  const [voiceText, setVoiceText] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [commandHistory, setCommandHistory] = useState<CommandHistoryItem[]>([]);
   
@@ -94,7 +93,6 @@ export const CommandInput: React.FC = () => {
 
     recognitionRef.current.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
-      setVoiceText(transcript);
       startTypingAnimation(transcript);
     };
 
@@ -178,13 +176,6 @@ export const CommandInput: React.FC = () => {
     return () => {
       if (autoExecuteTimer.current) clearTimeout(autoExecuteTimer.current);
       if (typingInterval.current) clearTimeout(typingInterval.current);
-    };
-  }, []);
-
-  // Clean-up any running interval when component unmounts
-  useEffect(() => {
-    return () => {
-      if (publishTimer.current) clearInterval(publishTimer.current);
     };
   }, []);
 
