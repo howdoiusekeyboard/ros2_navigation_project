@@ -83,11 +83,11 @@ cd project
 # Check if bun is installed, otherwise use npm
 if command -v bun &> /dev/null; then
   echo -e "${GREEN}Using bun to run dev server${NC}"
-  bun run dev &
+  bun run dev --host &
   WEB_PID=$!
 elif command -v npm &> /dev/null; then
   echo -e "${YELLOW}Bun not found, using npm instead${NC}"
-  npm run dev &
+  npm run dev -- --host &
   WEB_PID=$!
 else
   echo -e "${RED}Neither bun nor npm found. Please install one of them to run the web application.${NC}"
