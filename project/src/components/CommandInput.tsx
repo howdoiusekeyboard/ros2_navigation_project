@@ -122,9 +122,9 @@ export const CommandInput: React.FC = () => {
         setIsTypingFromVoice(false);
         // Auto-execute after 3 seconds if no user interaction
         autoExecuteTimer.current = setTimeout(() => {
-          processCommand(text);
-          setCommand('');
-        }, 3000);
+          processCommand(text); // Process the command
+          setCommand(''); // Clear the input after processing the command
+        }, 3000); // Timeout duration
       }
     };
     
