@@ -117,7 +117,7 @@ export const ArchitectureDiagram: React.FC = () => {
           <h3 className="text-lg font-semibold mb-2">Data Flow</h3>
           <ol className="list-decimal pl-5 space-y-2 text-slate-300">
             <li>User speaks or types a command (e.g., "Go to the table, wait for 5 seconds, then return to base")</li>
-            <li>Whisper API converts speech to text (if voice input was used)</li>
+            <li>Whisper converts speech to text (if voice input was used)</li>
             <li>Command is stored in supermemory.ai and relevant context is retrieved</li>
             <li>GPT-4 parses the command with context into structured JSON format</li>
             <li>Command Validator checks for safety constraints and feasibility</li>
