@@ -164,7 +164,7 @@ class TurtleControlService {
   }
 
   // Command history management
-  addToHistory(command: string, result: 'success' | 'error', parsedAction?: any): void {
+  addToHistory(command: string, result: 'success' | 'error', parsedAction?: ParsedMotionCommand): void {
     const historyItem: CommandHistoryItem = {
       id: Date.now().toString(),
       command,
