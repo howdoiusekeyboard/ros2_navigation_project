@@ -37,7 +37,9 @@ source install/setup.bash
 echo -e "${YELLOW}Checking for existing rosbridge processes...${NC}"
 if pgrep -f "rosbridge_websocket" > /dev/null; then
   echo -e "${YELLOW}Found existing rosbridge processes. Terminating...${NC}"
-  sudo fuser -k 9090/tcp || true
+  if ! fuser -k 9090/tcp > /dev/null 2>&1; then
+    echo -e "${RED}Failed to terminate processes on port 9090. Please ensure you have sufficient permissions.${NC}"
+  fi
   pkill -f "rosbridge_websocket" || true
   sleep 2
 fi
