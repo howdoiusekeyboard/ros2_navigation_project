@@ -103,7 +103,7 @@ echo -e "${YELLOW}The web dashboard should be available at: http://localhost:517
 echo
 echo -e "${YELLOW}Press Ctrl+C to stop all components${NC}"
 
-# Function to cleanup on exit
+# cleanup terminates all launched background processes and exits the script gracefully.
 cleanup() {
   echo -e "\n${YELLOW}Shutting down all components...${NC}"
   kill $WEB_PID $TURTLESIM_PID $ROSBRIDGE_PID 2>/dev/null || true
