@@ -78,7 +78,7 @@ echo -e "${GREEN}Turtlesim started with PID: ${TURTLESIM_PID}${NC}"
 
 # Start the web application
 echo -e "${YELLOW}Starting web application...${NC}"
-cd project
+cd "$(dirname "$0")/project"
 
 # Check if bun is installed, otherwise use npm
 if command -v bun &> /dev/null; then
