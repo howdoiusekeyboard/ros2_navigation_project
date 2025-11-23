@@ -181,17 +181,7 @@ export TURTLEBOT3_MODEL=burger
 ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
 ```
 
-### Terminal 2: Backend Server
-
-```bash
-cd ~/workspace/ros2_navigation_project/backend
-source /opt/ros/humble/setup.bash
-source ../install/setup.bash
-source venv/bin/activate
-./run.sh
-```
-
-### Terminal 3: Frontend Dashboard
+### Terminal 2: Full Stack (Backend + Frontend + Bridge)
 
 ```bash
 cd ~/workspace/ros2_navigation_project

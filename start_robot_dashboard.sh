@@ -76,6 +76,17 @@ echo -e "${GREEN}Turtlesim started with PID: ${TURTLESIM_PID}${NC}"
 
 # No custom bridge node needed; we publish Twist directly from the dashboard
 
+# Start the backend server
+echo -e "${YELLOW}Starting Backend Server...${NC}"
+cd backend
+# Ensure venv exists or run.sh handles it
+./run.sh &
+BACKEND_PID=$!
+cd ..
+sleep 2
+echo -e "${GREEN}Backend Server started with PID: ${BACKEND_PID}${NC}"
+
+
 # Start the web application
 echo -e "${YELLOW}Starting web application...${NC}"
 cd project
@@ -99,20 +110,6 @@ fi
 echo -e "${GREEN}Web application started with PID: ${WEB_PID}${NC}"
 echo
 echo -e "${GREEN}All components started successfully!${NC}"
-echo -e "${YELLOW}The web dashboard should be available at: http://localhost:5173${NC}"
-echo
-echo -e "${YELLOW}Press Ctrl+C to stop all components${NC}"
-
-# Function to cleanup on exit
-cleanup() {
-  echo -e "\n${YELLOW}Shutting down all components...${NC}"
-  kill $WEB_PID $TURTLESIM_PID $ROSBRIDGE_PID 2>/dev/null || true
-  echo -e "${GREEN}All components stopped${NC}"
-  exit 0
-}
-
-# Set up the trap to catch SIGINT (Ctrl+C)
-trap cleanup SIGINT
 
 # Wait for user to press Ctrl+C
 wait 

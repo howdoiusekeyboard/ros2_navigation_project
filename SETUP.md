@@ -1,5 +1,9 @@
 # Voice-Controlled Robot System - Setup Guide
 
+> [!NOTE]
+> For the most up-to-date quickstart instructions, please refer to the main [README.md](README.md). This guide contains detailed setup information.
+
+
 ## 🎯 What You Have Now
 
 A **functional voice-controlled robot system** with:
@@ -40,10 +44,11 @@ cd /home/noob/ros2_navigation_project
 ./start_robot_dashboard.sh
 ```
 
-This starts:
-- ROS2 rosbridge (WebSocket on port 9090)
-- Turtlesim (robot simulator)
-- Web dashboard (http://localhost:5173)
+This starts **ALL** components automatically:
+- ✅ **Backend Server** (FastAPI + Gemini)
+- ✅ **ROS2 rosbridge** (WebSocket on port 9090)
+- ✅ **Turtlesim** (robot simulator)
+- ✅ **Web dashboard** (http://localhost:5173)
 
 ### Step 3: Control the Robot
 
