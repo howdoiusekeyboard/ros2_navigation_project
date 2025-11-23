@@ -9,7 +9,7 @@
  */
 
 import { audioRecorderService, type RecordingResult } from './audioRecorderService';
-import { backendService } from './backendService';
+import { backendService, type VoiceCommandResult } from './backendService';
 
 export interface SpeechRecognitionResult {
   transcript: string;
@@ -17,12 +17,20 @@ export interface SpeechRecognitionResult {
   isFinal: boolean;
 }
 
+export interface CommandExecutionResult extends VoiceCommandResult {
+  // Extends VoiceCommandResult with any additional frontend-specific fields
+}
+
 class SpeechService {
   private isListening = false;
   private isSupported = false;
+  private useTurtlesim = false; // Toggle for turtlesim vs real robot
+  private useCompletePipeline = true; // Use complete pipeline (Whisper → Gemini → Robot)
+
   private resultCallbacks: ((result: SpeechRecognitionResult) => void)[] = [];
+  private commandExecutionCallbacks: ((result: CommandExecutionResult) => void)[] = [];
   private errorCallbacks: ((error: string) => void)[] = [];
-  private statusCallbacks: ((status: 'idle' | 'listening' | 'processing') => void)[] = [];
+  private statusCallbacks: ((status: 'idle' | 'listening' | 'processing' | 'executing') => void)[] = [];
 
   constructor() {
     this.checkSupport();
@@ -60,6 +68,7 @@ class SpeechService {
 
   /**
    * Transcribe recorded audio using backend Whisper API
+   * If useCompletePipeline is true, also parses and executes the command
    */
   private async transcribeAudio(recording: RecordingResult): Promise<void> {
     try {
@@ -73,22 +82,37 @@ class SpeechService {
       }
 
       // Send audio to backend for transcription
-      const response = await backendService.transcribeAudio(recording.audioBlob);
+      const transcriptionResponse = await backendService.transcribeAudio(recording.audioBlob);
+      console.log('Whisper API response:', transcriptionResponse);
 
-      console.log('Whisper API response:', response);
-
-      // Notify result (always final with Whisper)
+      // Always notify transcription result
       this.notifyResult({
-        transcript: response.transcript,
-        confidence: response.confidence,
+        transcript: transcriptionResponse.transcript,
+        confidence: transcriptionResponse.confidence,
         isFinal: true
       });
+
+      // If using complete pipeline, execute the command
+      if (this.useCompletePipeline) {
+        this.notifyStatus('executing');
+        console.log('Executing command via complete pipeline...');
+
+        const executionResult = await backendService.executeVoiceCommand(
+          transcriptionResponse.transcript,
+          this.useTurtlesim
+        );
+
+        console.log('Command execution result:', executionResult);
+
+        // Notify command execution result
+        this.notifyCommandExecution(executionResult);
+      }
 
       this.notifyStatus('idle');
 
     } catch (error: any) {
-      console.error('Transcription failed:', error);
-      this.notifyError(error.message || 'Transcription failed');
+      console.error('Voice command failed:', error);
+      this.notifyError(error.message || 'Voice command failed');
       this.notifyStatus('idle');
     }
   }
@@ -178,6 +202,13 @@ class SpeechService {
   }
 
   /**
+   * Register callback for command execution results
+   */
+  onCommandExecution(callback: (result: CommandExecutionResult) => void): void {
+    this.commandExecutionCallbacks.push(callback);
+  }
+
+  /**
    * Register callback for errors
    */
   onError(callback: (error: string) => void): void {
@@ -187,7 +218,7 @@ class SpeechService {
   /**
    * Register callback for status changes
    */
-  onStatusChange(callback: (status: 'idle' | 'listening' | 'processing') => void): void {
+  onStatusChange(callback: (status: 'idle' | 'listening' | 'processing' | 'executing') => void): void {
     this.statusCallbacks.push(callback);
   }
 
@@ -196,6 +227,13 @@ class SpeechService {
    */
   private notifyResult(result: SpeechRecognitionResult): void {
     this.resultCallbacks.forEach(cb => cb(result));
+  }
+
+  /**
+   * Notify all command execution callbacks
+   */
+  private notifyCommandExecution(result: CommandExecutionResult): void {
+    this.commandExecutionCallbacks.forEach(cb => cb(result));
   }
 
   /**
@@ -208,7 +246,7 @@ class SpeechService {
   /**
    * Notify all status callbacks
    */
-  private notifyStatus(status: 'idle' | 'listening' | 'processing'): void {
+  private notifyStatus(status: 'idle' | 'listening' | 'processing' | 'executing'): void {
     this.statusCallbacks.forEach(cb => cb(status));
   }
 
@@ -224,6 +262,73 @@ class SpeechService {
    */
   getIsListening(): boolean {
     return this.isListening;
+  }
+
+  /**
+   * Set whether to use turtlesim or real robot topics
+   */
+  setUseTurtlesim(useTurtlesim: boolean): void {
+    this.useTurtlesim = useTurtlesim;
+    console.log(`Using ${useTurtlesim ? 'turtlesim' : 'real robot'} topics`);
+  }
+
+  /**
+   * Get current turtlesim setting
+   */
+  getUseTurtlesim(): boolean {
+    return this.useTurtlesim;
+  }
+
+  /**
+   * Set whether to use complete pipeline (transcription + parsing + execution)
+   * or just transcription
+   */
+  setUseCompletePipeline(useCompletePipeline: boolean): void {
+    this.useCompletePipeline = useCompletePipeline;
+    console.log(`Complete pipeline: ${useCompletePipeline ? 'enabled' : 'disabled'}`);
+  }
+
+  /**
+   * Get current pipeline mode
+   */
+  getUseCompletePipeline(): boolean {
+    return this.useCompletePipeline;
+  }
+
+  /**
+   * Send direct twist command to robot
+   */
+  async sendTwistCommand(linearX: number, angularZ: number): Promise<void> {
+    try {
+      await backendService.sendTwistCommand(linearX, angularZ, this.useTurtlesim);
+    } catch (error: any) {
+      this.notifyError(error.message || 'Failed to send twist command');
+      throw error;
+    }
+  }
+
+  /**
+   * Stop the robot immediately
+   */
+  async stopRobot(): Promise<void> {
+    try {
+      await backendService.stopRobot(this.useTurtlesim);
+    } catch (error: any) {
+      this.notifyError(error.message || 'Failed to stop robot');
+      throw error;
+    }
+  }
+
+  /**
+   * Get current robot state
+   */
+  async getRobotState(): Promise<any> {
+    try {
+      return await backendService.getRobotState();
+    } catch (error: any) {
+      this.notifyError(error.message || 'Failed to get robot state');
+      throw error;
+    }
   }
 }
 

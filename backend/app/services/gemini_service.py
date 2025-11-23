@@ -263,15 +263,24 @@ class GeminiCommandParser:
         )
 
     def _build_parsing_prompt(self, command: str, context: Optional[Dict[str, Any]] = None) -> str:
-        """Build prompt for Gemini with command schema"""
+        """Build prompt for Gemini with command schema and conversation context"""
 
         context_str = ""
         if context:
-            context_str = f"\n\nCurrent robot state:\n{context}"
+            # Handle conversation history if provided
+            if isinstance(context, str):
+                # Context is already formatted string (from context_builder)
+                context_str = f"\n\n{context}\n"
+            elif isinstance(context, dict):
+                # Legacy dict format
+                if 'conversation_history' in context:
+                    context_str += f"\n\n{context['conversation_history']}\n"
+                if 'robot_state' in context:
+                    context_str += f"\nCurrent robot state:\n{context['robot_state']}\n"
 
-        prompt = f"""You are a robot command interpreter. Parse the user's natural language command into a structured JSON format.
+        prompt = f"""You are a robot command interpreter with conversation memory. Parse the user's natural language command into a structured JSON format.{context_str}
 
-User command: "{command}"{context_str}
+User command: "{command}"
 
 Available actions:
 - "twist": Send velocity command (linear_x in m/s, angular_z in rad/s)
@@ -324,6 +333,27 @@ Output:
   "parameters": {{"angle": -1.57}},
   "confidence": 0.95,
   "reasoning": "90 degrees = π/2 radians, clockwise is negative"
+}}
+
+**IMPORTANT: Spatial Reference Resolution**
+If conversation history shows previous locations, resolve references like "there", "back", "previous location":
+
+Command: "go there" (with history showing last location was x=2.5, y=3.1)
+Output:
+{{
+  "action": "navigate",
+  "parameters": {{"x": 2.5, "y": 3.1, "theta": 0.0}},
+  "confidence": 0.88,
+  "reasoning": "Resolved 'there' to last mentioned location from conversation history"
+}}
+
+Command: "go to the kitchen" (with known locations showing kitchen at x=2.0, y=3.0)
+Output:
+{{
+  "action": "navigate",
+  "parameters": {{"x": 2.0, "y": 3.0, "theta": 0.0}},
+  "confidence": 0.90,
+  "reasoning": "Using known location 'kitchen' from conversation context"
 }}
 
 Now parse this command and return ONLY the JSON output:

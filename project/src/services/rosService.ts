@@ -17,6 +17,17 @@ export interface RobotPose {
   theta: number;
 }
 
+export interface Explanation {
+  timestamp: number;
+  decision_type: string;
+  text: string;
+  confidence: number;
+  metrics: {
+    generation_time: number;
+    token_count: number;
+  };
+}
+
 class ROSService {
   private ros: ROSLIB.Ros | null = null;
   private cmdVelPublisher: ROSLIB.Topic | null = null;
@@ -78,6 +89,12 @@ class ROSService {
   /**
    * Setup subscribers for robot state
    */
+  private explanationSubscriber: ROSLIB.Topic | null = null;
+  private explanationCallbacks: ((explanation: Explanation) => void)[] = [];
+
+  /**
+   * Setup subscribers for robot state
+   */
   private setupSubscribers(): void {
     if (!this.ros) return;
 
@@ -97,6 +114,36 @@ class ROSService {
       };
       this.notifyPoseChange(pose);
     });
+
+    // Subscribe to explanations
+    this.explanationSubscriber = new ROSLIB.Topic({
+      ros: this.ros,
+      name: '/navigation/explanation_detailed',
+      messageType: 'std_msgs/String'
+    });
+
+    this.explanationSubscriber.subscribe((message: any) => {
+      try {
+        const explanation: Explanation = JSON.parse(message.data);
+        this.notifyExplanationReceived(explanation);
+      } catch (e) {
+        console.error('Failed to parse explanation:', e);
+      }
+    });
+  }
+
+  /**
+   * Register callback for explanation updates
+   */
+  onExplanationReceived(callback: (explanation: Explanation) => void): void {
+    this.explanationCallbacks.push(callback);
+  }
+
+  /**
+   * Notify all explanation callbacks
+   */
+  private notifyExplanationReceived(explanation: Explanation): void {
+    this.explanationCallbacks.forEach(cb => cb(explanation));
   }
 
   /**

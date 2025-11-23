@@ -1,0 +1,368 @@
+import React, { useState } from 'react';
+import { Calendar, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
+
+const GanttChart = () => {
+  const [hoveredTask, setHoveredTask] = useState(null);
+
+  const weeks = [
+    { num: 1, dates: 'Jan 20-26' },
+    { num: 2, dates: 'Jan 27-Feb 2' },
+    { num: 3, dates: 'Feb 3-9' },
+    { num: 4, dates: 'Feb 10-16' },
+    { num: 5, dates: 'Feb 17-23' },
+    { num: 6, dates: 'Feb 24-Mar 2' },
+    { num: 7, dates: 'Mar 3-9' },
+    { num: 8, dates: 'Mar 10-16' }
+  ];
+
+  const tasks = [
+    {
+      id: 1,
+      name: 'Literature Review',
+      category: 'Foundation',
+      start: 1,
+      duration: 1,
+      color: 'bg-purple-500',
+      deliverable: 'Complete literature review',
+      milestone: false
+    },
+    {
+      id: 2,
+      name: 'Architecture Design',
+      category: 'Foundation',
+      start: 1,
+      duration: 1,
+      color: 'bg-purple-500',
+      deliverable: 'System architecture diagram',
+      milestone: true
+    },
+    {
+      id: 3,
+      name: 'Environment Setup',
+      category: 'Foundation',
+      start: 1,
+      duration: 1,
+      color: 'bg-purple-500',
+      deliverable: 'ROS2 packages ready',
+      milestone: false
+    },
+    {
+      id: 4,
+      name: 'Conversation Memory',
+      category: 'Conversation',
+      start: 2,
+      duration: 1,
+      color: 'bg-blue-500',
+      deliverable: '5+ turn dialogue',
+      milestone: true
+    },
+    {
+      id: 5,
+      name: 'Nav Decision Logging',
+      category: 'XAI Navigation',
+      start: 3,
+      duration: 1,
+      color: 'bg-green-500',
+      deliverable: 'Decision capture system',
+      milestone: false
+    },
+    {
+      id: 6,
+      name: 'Explanation Engine',
+      category: 'XAI Navigation',
+      start: 4,
+      duration: 1,
+      color: 'bg-green-500',
+      deliverable: 'NL explanations',
+      milestone: true
+    },
+    {
+      id: 7,
+      name: 'Digital Twin Setup',
+      category: 'Digital Twin',
+      start: 5,
+      duration: 1,
+      color: 'bg-orange-500',
+      deliverable: 'Gazebo baseline',
+      milestone: true
+    },
+    {
+      id: 8,
+      name: 'Anomaly Detection',
+      category: 'Digital Twin',
+      start: 6,
+      duration: 1,
+      color: 'bg-orange-500',
+      deliverable: 'ML model trained',
+      milestone: true
+    },
+    {
+      id: 9,
+      name: 'System Integration',
+      category: 'Integration',
+      start: 7,
+      duration: 1,
+      color: 'bg-red-500',
+      deliverable: 'Unified system',
+      milestone: true,
+      critical: true
+    },
+    {
+      id: 10,
+      name: 'Dashboard Polish',
+      category: 'Integration',
+      start: 7,
+      duration: 1,
+      color: 'bg-red-500',
+      deliverable: 'Enhanced UI',
+      milestone: false
+    },
+    {
+      id: 11,
+      name: 'Evaluation',
+      category: 'Documentation',
+      start: 8,
+      duration: 1,
+      color: 'bg-indigo-500',
+      deliverable: 'Metrics & testing',
+      milestone: false
+    },
+    {
+      id: 12,
+      name: 'Documentation',
+      category: 'Documentation',
+      start: 8,
+      duration: 1,
+      color: 'bg-indigo-500',
+      deliverable: 'Final report',
+      milestone: false
+    },
+    {
+      id: 13,
+      name: 'Presentation',
+      category: 'Documentation',
+      start: 8,
+      duration: 1,
+      color: 'bg-indigo-500',
+      deliverable: 'Demo video',
+      milestone: true
+    }
+  ];
+
+  const categories = [
+    { name: 'Foundation', color: 'purple' },
+    { name: 'Conversation', color: 'blue' },
+    { name: 'XAI Navigation', color: 'green' },
+    { name: 'Digital Twin', color: 'orange' },
+    { name: 'Integration', color: 'red' },
+    { name: 'Documentation', color: 'indigo' }
+  ];
+
+  return (
+    <div className="w-full p-6 bg-gray-50">
+      {/* Header */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 mb-1">
+              Intelligent Digital Twin with XAI for HRI
+            </h1>
+            <p className="text-gray-600 text-sm">8-Week Development Timeline</p>
+          </div>
+          <Calendar className="w-10 h-10 text-blue-600" />
+        </div>
+        
+        {/* Legend */}
+        <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200 text-sm">
+          {categories.map(cat => (
+            <div key={cat.name} className="flex items-center gap-2">
+              <div className={`w-3 h-3 bg-${cat.color}-500 rounded`}></div>
+              <span className="text-gray-700">{cat.name}</span>
+            </div>
+          ))}
+          <div className="flex items-center gap-2 ml-3 border-l pl-3 border-gray-300">
+            <CheckCircle2 className="w-4 h-4 text-yellow-600" />
+            <span className="text-gray-700">Milestone</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-600" />
+            <span className="text-gray-700">Critical</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Gantt Chart */}
+      <div className="bg-white rounded-lg shadow-md overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-blue-600 text-white">
+              <th className="p-3 text-left font-semibold border-r border-blue-500 min-w-[200px]">
+                Task
+              </th>
+              {weeks.map(week => (
+                <th key={week.num} className="p-3 text-center border-r border-blue-500 min-w-[100px]">
+                  <div className="font-bold">Week {week.num}</div>
+                  <div className="text-xs font-normal opacity-90">{week.dates}</div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {categories.map((category, catIndex) => {
+              const categoryTasks = tasks.filter(t => t.category === category.name);
+              return (
+                <React.Fragment key={category.name}>
+                  {/* Category Header */}
+                  <tr className={`bg-${category.color}-50 border-l-4 border-${category.color}-500`}>
+                    <td className="p-2 font-semibold text-gray-700 bg-white border-r border-gray-200">
+                      {category.name}
+                    </td>
+                    {weeks.map(week => (
+                      <td key={week.num} className="border-r border-gray-200"></td>
+                    ))}
+                  </tr>
+                  
+                  {/* Tasks */}
+                  {categoryTasks.map(task => (
+                    <tr
+                      key={task.id}
+                      className="hover:bg-gray-50 transition-colors border-b border-gray-100"
+                      onMouseEnter={() => setHoveredTask(task.id)}
+                      onMouseLeave={() => setHoveredTask(null)}
+                    >
+                      <td className="p-3 text-sm text-gray-700 bg-white border-r border-gray-200">
+                        <div className="flex items-center gap-2">
+                          {task.milestone ? (
+                            <CheckCircle2 className="w-4 h-4 text-yellow-600 flex-shrink-0" />
+                          ) : (
+                            <Circle className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          )}
+                          {task.critical && (
+                            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                          )}
+                          <span>{task.name}</span>
+                        </div>
+                      </td>
+                      
+                      {weeks.map(week => {
+                        const isActive = week.num >= task.start && week.num < task.start + task.duration;
+                        
+                        return (
+                          <td
+                            key={week.num}
+                            className="p-2 border-r border-gray-200"
+                          >
+                            {isActive && (
+                              <div
+                                className={`h-8 ${task.color} rounded shadow-sm ${
+                                  task.critical ? 'ring-2 ring-red-400' : ''
+                                } ${
+                                  hoveredTask === task.id ? 'opacity-100 scale-105' : 'opacity-90'
+                                } transition-all`}
+                              ></div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Task Details on Hover */}
+      {hoveredTask && (
+        <div className="mt-6 bg-blue-50 border-l-4 border-blue-600 p-4 rounded-lg shadow">
+          <h3 className="font-bold text-gray-800 mb-2">
+            {tasks.find(t => t.id === hoveredTask)?.name}
+          </h3>
+          <div className="space-y-1 text-sm">
+            <p className="text-gray-700">
+              <span className="font-semibold">Deliverable:</span>{' '}
+              {tasks.find(t => t.id === hoveredTask)?.deliverable}
+            </p>
+            <p className="text-gray-600">
+              <span className="font-semibold">Timeline:</span> Week{' '}
+              {tasks.find(t => t.id === hoveredTask)?.start}
+            </p>
+            <p className="text-gray-600">
+              <span className="font-semibold">Category:</span>{' '}
+              {tasks.find(t => t.id === hoveredTask)?.category}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Milestones Summary */}
+      <div className="mt-6 bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <CheckCircle2 className="w-6 h-6 text-yellow-600" />
+          Key Milestones (7 Total)
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {tasks.filter(t => t.milestone).map(milestone => (
+            <div key={milestone.id} className="border-l-4 border-yellow-500 bg-yellow-50 p-3 rounded">
+              <div className="flex justify-between items-start">
+                <div className="font-semibold text-gray-800 text-sm">{milestone.name}</div>
+                <span className="text-xs bg-yellow-200 px-2 py-1 rounded">W{milestone.start}</span>
+              </div>
+              <div className="text-xs text-gray-600 mt-1">{milestone.deliverable}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Critical Path Alert */}
+      <div className="mt-6 bg-red-50 border-l-4 border-red-600 p-4 rounded-lg shadow">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <h3 className="font-bold text-red-800 mb-2">Critical Path: Week 7 Integration</h3>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              Week 7 is the critical bottleneck. Success requires all three major components 
+              (conversation memory by W2, XAI navigation by W4, digital twin by W6) complete on schedule. 
+              Any delays cascade directly to final delivery.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Weekly Summary */}
+      <div className="mt-6 bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-xl font-bold text-gray-800 mb-4">Weekly Focus Areas</h2>
+        <div className="space-y-2">
+          {[
+            { week: 1, focus: 'Foundation', tasks: 'Architecture + Setup', milestone: 'Design Complete' },
+            { week: 2, focus: 'Conversation', tasks: 'Memory Implementation', milestone: '5-Turn Dialogue' },
+            { week: 3, focus: 'XAI - Part 1', tasks: 'Decision Logging', milestone: '-' },
+            { week: 4, focus: 'XAI - Part 2', tasks: 'Explanation Generation', milestone: 'NL Explanations' },
+            { week: 5, focus: 'Twin - Part 1', tasks: 'Gazebo Setup + Data', milestone: 'Baseline Data' },
+            { week: 6, focus: 'Twin - Part 2', tasks: 'ML Model Training', milestone: 'Anomaly Detection' },
+            { week: 7, focus: 'Integration', tasks: 'System Unification', milestone: 'Complete System', critical: true },
+            { week: 8, focus: 'Documentation', tasks: 'Eval + Report + Demo', milestone: 'Final Delivery' }
+          ].map(item => (
+            <div
+              key={item.week}
+              className={`grid grid-cols-4 gap-4 p-3 rounded ${
+                item.critical ? 'bg-red-50 border-l-4 border-red-500' : 'bg-gray-50'
+              }`}
+            >
+              <div className="font-bold text-gray-800">Week {item.week}</div>
+              <div className="text-gray-700 text-sm">{item.focus}</div>
+              <div className="text-gray-600 text-sm">{item.tasks}</div>
+              <div className="text-gray-600 text-sm flex items-center gap-1">
+                {item.milestone !== '-' && <CheckCircle2 className="w-3 h-3 text-yellow-600" />}
+                {item.milestone}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default GanttChart;

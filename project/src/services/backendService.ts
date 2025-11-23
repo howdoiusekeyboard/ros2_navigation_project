@@ -19,6 +19,21 @@ export interface ParsedCommand {
   action: string;
   parameters?: any;
   confidence: number;
+  reasoning?: string;
+}
+
+export interface VoiceCommandResult {
+  transcript: string;
+  parsed_command: ParsedCommand;
+  execution_status: string;
+  session_id: string;  // NEW: Session ID for conversation memory
+  resolved_reference: string | null;  // NEW: Resolved spatial reference description
+  latency: {
+    gemini_ms: number;
+    execution_ms: number;
+    memory_ms: number;  // NEW: Memory operation latency
+    total_ms: number;
+  };
 }
 
 export interface BackendConfig {
@@ -131,6 +146,147 @@ class BackendService {
     } catch (error: any) {
       console.error('Command parsing failed:', error);
       throw new Error(`Failed to parse command: ${error.message}`);
+    }
+  }
+
+  /**
+   * Execute complete voice command pipeline
+   * (Transcription → Parsing → Robot Execution)
+   *
+   * @param transcript - Voice command text from Whisper
+   * @param useTurtlesim - Whether to use turtlesim topics
+   * @param context - Optional robot state/context
+   * @returns Complete execution result with latency metrics
+   */
+  async executeVoiceCommand(
+    transcript: string,
+    useTurtlesim: boolean = false,
+    sessionId?: string,
+    context?: any
+  ): Promise<VoiceCommandResult> {
+    try {
+      const requestBody: any = {
+        transcript,
+        use_turtlesim: useTurtlesim,
+        context: context || {}
+      };
+
+      // Include session_id if provided
+      if (sessionId) {
+        requestBody.session_id = sessionId;
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/v1/execute_voice_command`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(15000) // 15 second timeout
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Execution failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Voice command executed:', result);
+
+      return result;
+    } catch (error: any) {
+      console.error('Voice command execution failed:', error);
+
+      if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+        throw new Error('Command execution timeout');
+      }
+
+      throw new Error(`Failed to execute command: ${error.message}`);
+    }
+  }
+
+  /**
+   * Send robot control command (twist)
+   *
+   * @param linearX - Linear velocity (m/s)
+   * @param angularZ - Angular velocity (rad/s)
+   * @param useTurtlesim - Whether to use turtlesim topics
+   */
+  async sendTwistCommand(
+    linearX: number,
+    angularZ: number,
+    useTurtlesim: boolean = false
+  ): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v1/robot/twist`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          linear_x: linearX,
+          angular_z: angularZ,
+          use_turtlesim: useTurtlesim
+        }),
+        signal: AbortSignal.timeout(5000)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Robot control failed: ${response.status}`);
+      }
+    } catch (error: any) {
+      console.error('Twist command failed:', error);
+      throw new Error(`Failed to send robot command: ${error.message}`);
+    }
+  }
+
+  /**
+   * Stop the robot
+   *
+   * @param useTurtlesim - Whether to use turtlesim topics
+   */
+  async stopRobot(useTurtlesim: boolean = false): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v1/robot/stop`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          use_turtlesim: useTurtlesim
+        }),
+        signal: AbortSignal.timeout(5000)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Stop command failed: ${response.status}`);
+      }
+    } catch (error: any) {
+      console.error('Stop command failed:', error);
+      throw new Error(`Failed to stop robot: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get robot state (pose, velocity)
+   */
+  async getRobotState(): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v1/robot/state`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(5000)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to get robot state: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      console.error('Failed to get robot state:', error);
+      throw new Error(`Failed to get robot state: ${error.message}`);
     }
   }
 

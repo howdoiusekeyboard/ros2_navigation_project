@@ -7,10 +7,12 @@ import { SystemStatus } from '../components/SystemStatus';
 import { QuickActions } from '../components/QuickActions';
 import { ArchitectureDiagram } from '../components/ArchitectureDiagram';
 import { SystemPrompt } from '../components/SystemPrompt';
-import { Layers, Terminal, MessageSquare } from 'lucide-react';
+import { ExplanationPanel } from '../components/ExplanationPanel';
+import { DecisionTimeline } from '../components/DecisionTimeline';
+import { Layers, Terminal, MessageSquare, Brain } from 'lucide-react';
 
 export const RobotDashboard: React.FC = () => {
-  const [activePanel, setActivePanel] = useState<'default' | 'architecture' | 'prompt'>('default');
+  const [activePanel, setActivePanel] = useState<'default' | 'architecture' | 'prompt' | 'xai'>('default');
 
   const renderPanel = () => {
     switch (activePanel) {
@@ -18,6 +20,13 @@ export const RobotDashboard: React.FC = () => {
         return <ArchitectureDiagram />;
       case 'prompt':
         return <SystemPrompt />;
+      case 'xai':
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
+            <ExplanationPanel />
+            <DecisionTimeline />
+          </div>
+        );
       default:
         return (
           <>
@@ -42,37 +51,44 @@ export const RobotDashboard: React.FC = () => {
           <h1 className="text-2xl font-bold">Robot Control System</h1>
           <p className="text-slate-400">ROS2 + GPT-4 Integration</p>
         </div>
-        
+
         <div className="flex gap-2">
           <button
             onClick={() => setActivePanel('default')}
-            className={`px-4 py-2 rounded-md flex items-center gap-2 ${
-              activePanel === 'default' 
-                ? 'bg-blue-600 text-white' 
+            className={`px-4 py-2 rounded-md flex items-center gap-2 ${activePanel === 'default'
+                ? 'bg-blue-600 text-white'
                 : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
-            }`}
+              }`}
           >
             <Terminal className="h-4 w-4" />
             <span>Dashboard</span>
           </button>
           <button
-            onClick={() => setActivePanel('architecture')}
-            className={`px-4 py-2 rounded-md flex items-center gap-2 ${
-              activePanel === 'architecture' 
-                ? 'bg-blue-600 text-white' 
+            onClick={() => setActivePanel('xai')}
+            className={`px-4 py-2 rounded-md flex items-center gap-2 ${activePanel === 'xai'
+                ? 'bg-blue-600 text-white'
                 : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
-            }`}
+              }`}
+          >
+            <Brain className="h-4 w-4" />
+            <span>XAI Brain</span>
+          </button>
+          <button
+            onClick={() => setActivePanel('architecture')}
+            className={`px-4 py-2 rounded-md flex items-center gap-2 ${activePanel === 'architecture'
+                ? 'bg-blue-600 text-white'
+                : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
+              }`}
           >
             <Layers className="h-4 w-4" />
             <span>Architecture</span>
           </button>
           <button
             onClick={() => setActivePanel('prompt')}
-            className={`px-4 py-2 rounded-md flex items-center gap-2 ${
-              activePanel === 'prompt' 
-                ? 'bg-blue-600 text-white' 
+            className={`px-4 py-2 rounded-md flex items-center gap-2 ${activePanel === 'prompt'
+                ? 'bg-blue-600 text-white'
                 : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
-            }`}
+              }`}
           >
             <MessageSquare className="h-4 w-4" />
             <span>System Prompt</span>

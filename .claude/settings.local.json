@@ -22,7 +22,17 @@
       "Bash(du:*)",
       "Bash(wc:*)",
       "Bash(git -C /home/noob/ros2_navigation_project log --oneline --all)",
-      "Bash(git -C /home/noob/ros2_navigation_project diff --stat HEAD)"
+      "Bash(git -C /home/noob/ros2_navigation_project diff --stat HEAD)",
+      "Bash(git -C /home/noob/ros2_navigation_project status --verbose)",
+      "Bash(git -C /home/noob/ros2_navigation_project log --oneline --graph --all -20)",
+      "Bash(git -C /home/noob/ros2_navigation_project branch -vv)",
+      "Bash(git -C /home/noob/ros2_navigation_project diff --stat)",
+      "Bash(git -C /home/noob/ros2_navigation_project diff --cached --stat)",
+      "Bash(git -C /home/noob/ros2_navigation_project remote -v)",
+      "Bash(git -C /home/noob/ros2_navigation_project ls-files:*)",
+      "Bash(git -C /home/noob/ros2_navigation_project stash list)",
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:github.com)"
     ]
   },
   "outputStyle": "Explanatory"
