@@ -21,6 +21,9 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# Add bun to PATH
+export PATH="$HOME/.bun/bin:$PATH"
+
 # Check if ROS2 is sourced
 if [ -z "$ROS_DISTRO" ]; then
   echo -e "${YELLOW}ROS2 environment not sourced. Sourcing it now...${NC}"
@@ -102,8 +105,7 @@ elif command -v npm &> /dev/null; then
   WEB_PID=$!
 else
   echo -e "${RED}Neither bun nor npm found. Please install one of them to run the web application.${NC}"
-  # Clean up other processes
-  kill $TURTLESIM_PID $ROSBRIDGE_PID 2>/dev/null || true
+  # Clean up other processes (cleanup function will handle this on exit)
   exit 1
 fi
 
@@ -112,4 +114,4 @@ echo
 echo -e "${GREEN}All components started successfully!${NC}"
 
 # Wait for user to press Ctrl+C
-wait 
+wait

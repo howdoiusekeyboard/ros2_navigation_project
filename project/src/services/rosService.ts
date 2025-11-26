@@ -1,4 +1,4 @@
-import ROSLIB from 'roslib';
+import { Ros, Topic } from 'roslib';
 
 export interface TwistCommand {
   linear: number;
@@ -29,9 +29,9 @@ export interface Explanation {
 }
 
 class ROSService {
-  private ros: ROSLIB.Ros | null = null;
-  private cmdVelPublisher: ROSLIB.Topic | null = null;
-  private poseSubscriber: ROSLIB.Topic | null = null;
+  private ros: Ros | null = null;
+  private cmdVelPublisher: Topic | null = null;
+  private poseSubscriber: Topic | null = null;
   private connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'error' = 'disconnected';
   private statusCallbacks: ((status: string) => void)[] = [];
   private poseCallbacks: ((pose: RobotPose) => void)[] = [];
@@ -47,7 +47,7 @@ class ROSService {
     this.connectionStatus = 'connecting';
     this.notifyStatusChange('Connecting to ROS2...');
 
-    this.ros = new ROSLIB.Ros({
+    this.ros = new Ros({
       url: url
     });
 
@@ -79,7 +79,7 @@ class ROSService {
     if (!this.ros) return;
 
     // Publisher for turtlesim (demo) - topic: /turtle1/cmd_vel
-    this.cmdVelPublisher = new ROSLIB.Topic({
+    this.cmdVelPublisher = new Topic({
       ros: this.ros,
       name: '/turtle1/cmd_vel',
       messageType: 'geometry_msgs/Twist'
@@ -89,7 +89,7 @@ class ROSService {
   /**
    * Setup subscribers for robot state
    */
-  private explanationSubscriber: ROSLIB.Topic | null = null;
+  private explanationSubscriber: Topic | null = null;
   private explanationCallbacks: ((explanation: Explanation) => void)[] = [];
 
   /**
@@ -100,7 +100,7 @@ class ROSService {
 
     // Subscribe to robot pose (if available)
     // For turtlesim, this would be /turtle1/pose
-    this.poseSubscriber = new ROSLIB.Topic({
+    this.poseSubscriber = new Topic({
       ros: this.ros,
       name: '/turtle1/pose',
       messageType: 'turtlesim/Pose'
@@ -116,7 +116,7 @@ class ROSService {
     });
 
     // Subscribe to explanations
-    this.explanationSubscriber = new ROSLIB.Topic({
+    this.explanationSubscriber = new Topic({
       ros: this.ros,
       name: '/navigation/explanation_detailed',
       messageType: 'std_msgs/String'
@@ -155,7 +155,7 @@ class ROSService {
       return;
     }
 
-    const twist = new ROSLIB.Message({
+    const twist = {
       linear: {
         x: command.linear,
         y: 0,
@@ -166,7 +166,7 @@ class ROSService {
         y: 0,
         z: command.angular
       }
-    });
+    };
 
     this.cmdVelPublisher.publish(twist);
     console.log('Published twist:', command);

@@ -32,7 +32,11 @@
       "Bash(git -C /home/noob/ros2_navigation_project ls-files:*)",
       "Bash(git -C /home/noob/ros2_navigation_project stash list)",
       "WebFetch(domain:arxiv.org)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(git check-ignore:*)",
+      "Bash(xargs -I {} sh -c \"if [ -d \"\"{}\"\" ]; then du -sh \"\"{}\"\"; fi\")",
+      "Bash(curl:*)",
+      "Bash(sed:*)"
     ]
   },
   "outputStyle": "Explanatory"

@@ -28,6 +28,14 @@ Thumbs.db
 node_modules/
 .venv/
 
+# Python virtual environments (catch all variations)
+venv/
+**/venv/
+backend/venv/
+
 # Database
 *.db
 *.sqlite
+*.log
+backend/.env
+CLAUDE.md

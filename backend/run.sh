@@ -8,9 +8,10 @@ echo "========================================="
 echo "Voice-Controlled Robot Backend Server"
 echo "========================================="
 
-# Check if virtual environment exists
-if [ ! -d "venv" ]; then
-    echo "Virtual environment not found. Creating..."
+# Check if virtual environment exists and is valid
+if [ ! -f "venv/bin/activate" ]; then
+    echo "Virtual environment not found or invalid. Creating..."
+    rm -rf venv
     python3 -m venv venv
     echo "Installing dependencies..."
     source venv/bin/activate
