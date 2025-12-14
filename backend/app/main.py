@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 import sys
 from datetime import datetime
+from typing import List, Dict, Any, Optional
 
 from app.config import settings
 from app.ros2_client.robot_controller import ros2_manager
@@ -814,7 +815,7 @@ async def get_spatial_references(session_id: str):
 # ==================== Navigation Decision Endpoints (Week 3) ====================
 
 @app.post("/api/v1/navigation/decisions/sync")
-async def sync_navigation_decisions(decisions: list):
+async def sync_navigation_decisions(decisions: List[Dict[str, Any]]):
     """
     Sync navigation decisions from ROS2 XAI Navigator node.
 
@@ -840,6 +841,18 @@ async def sync_navigation_decisions(decisions: list):
         }
     """
     try:
+        # Validate that we have a list
+        if not isinstance(decisions, list):
+            raise HTTPException(status_code=422, detail="Request body must be a list of decisions")
+
+        # Allow empty list (no decisions to sync)
+        if len(decisions) == 0:
+            logger.debug("Sync called with empty decision list")
+            return {
+                "success": True,
+                "synced_count": 0
+            }
+
         from app.database.navigation_db import get_navigation_db
 
         nav_db = await get_navigation_db()
@@ -851,8 +864,11 @@ async def sync_navigation_decisions(decisions: list):
             "synced_count": count
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to sync navigation decisions: {e}")
+        logger.exception("Full traceback:")  # Log full traceback for debugging
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1047,7 +1063,8 @@ async def startup_event():
     try:
         if settings.gemini_api_key:
             logger.info("Initializing Gemini Command Parser...")
-            initialize_gemini(api_key=settings.gemini_api_key, model_name="gemini-2.0-flash-exp")
+            # Use Gemini 2.5 Flash (September 2025 preview) for better performance
+            initialize_gemini(api_key=settings.gemini_api_key, model_name="gemini-2.5-flash-preview-09-2025")
             logger.info("✅ Gemini Command Parser initialized successfully")
         else:
             logger.warning("⚠️ GEMINI_API_KEY not set - command parsing will fail")

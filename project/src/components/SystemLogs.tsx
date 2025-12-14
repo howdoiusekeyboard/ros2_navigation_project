@@ -9,7 +9,7 @@ export const SystemLogs: React.FC = () => {
       id: 1,
       level: 'info',
       timestamp: "2025-06-18T14:32:40",
-      source: "gpt4_command_parser",
+      source: "gemini_command_parser",
       message: "Received command: 'Go to the table, wait for 5 seconds, then return to base'"
     },
     {

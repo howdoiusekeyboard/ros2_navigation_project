@@ -24,6 +24,46 @@ NC='\033[0m' # No Color
 # Add bun to PATH
 export PATH="$HOME/.bun/bin:$PATH"
 
+# Trap Ctrl+C for graceful shutdown
+cleanup() {
+    echo -e "\n${YELLOW}Stopping all services...${NC}"
+
+    # Kill child processes gracefully
+    if [ ! -z "$ROSBRIDGE_PID" ] && kill -0 $ROSBRIDGE_PID 2>/dev/null; then
+        echo -e "${YELLOW}Stopping ROS Bridge (PID: $ROSBRIDGE_PID)...${NC}"
+        kill -TERM $ROSBRIDGE_PID 2>/dev/null
+    fi
+
+    if [ ! -z "$TURTLESIM_PID" ] && kill -0 $TURTLESIM_PID 2>/dev/null; then
+        echo -e "${YELLOW}Stopping Turtlesim (PID: $TURTLESIM_PID)...${NC}"
+        kill -TERM $TURTLESIM_PID 2>/dev/null
+    fi
+
+    if [ ! -z "$BACKEND_PID" ] && kill -0 $BACKEND_PID 2>/dev/null; then
+        echo -e "${YELLOW}Stopping Backend (PID: $BACKEND_PID)...${NC}"
+        kill -TERM $BACKEND_PID 2>/dev/null
+    fi
+
+    if [ ! -z "$WEB_PID" ] && kill -0 $WEB_PID 2>/dev/null; then
+        echo -e "${YELLOW}Stopping Web App (PID: $WEB_PID)...${NC}"
+        kill -TERM $WEB_PID 2>/dev/null
+    fi
+
+    # Wait for graceful shutdown
+    sleep 1
+
+    # Force kill any remaining processes (suppress output)
+    pkill -KILL -f "rosbridge" 2>/dev/null
+    pkill -KILL -f "turtlesim" 2>/dev/null
+    pkill -KILL -f "uvicorn app.main" 2>/dev/null
+    pkill -KILL -f "vite" 2>/dev/null
+
+    echo -e "${GREEN}All services stopped cleanly${NC}"
+    exit 0
+}
+
+trap cleanup INT TERM
+
 # Check if ROS2 is sourced
 if [ -z "$ROS_DISTRO" ]; then
   echo -e "${YELLOW}ROS2 environment not sourced. Sourcing it now...${NC}"
@@ -112,6 +152,9 @@ fi
 echo -e "${GREEN}Web application started with PID: ${WEB_PID}${NC}"
 echo
 echo -e "${GREEN}All components started successfully!${NC}"
+echo ""
+echo -e "${YELLOW}Press Ctrl+C to stop all services${NC}"
+echo ""
 
-# Wait for user to press Ctrl+C
-wait
+# Wait for user to press Ctrl+C (suppress error output from ROS shutdown)
+wait 2>/dev/null

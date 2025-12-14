@@ -9,7 +9,25 @@ if ! command -v tmux &> /dev/null; then
 fi
 
 SESSION="week4_demo"
-API_KEY="AIzaSyDbgs1D3YYB0PrMb7NMy2WaMuzvzbEf5Og"
+
+# Check if GEMINI_API_KEY is set
+if [ -z "$GEMINI_API_KEY" ]; then
+    echo "❌ Error: GEMINI_API_KEY environment variable not set"
+    echo ""
+    echo "Set it with:"
+    echo "  export GEMINI_API_KEY='your_key_here'"
+    echo ""
+    echo "Or add to ~/.bashrc for persistence:"
+    echo "  echo 'export GEMINI_API_KEY=\"your_key\"' >> ~/.bashrc"
+    echo "  source ~/.bashrc"
+    echo ""
+    echo "Get your API key from: https://aistudio.google.com/app/apikey"
+    echo ""
+    exit 1
+fi
+
+echo "✓ Using GEMINI_API_KEY: ${GEMINI_API_KEY:0:20}..." # Show first 20 chars only
+echo ""
 
 # Kill existing session if it exists
 tmux kill-session -t $SESSION 2>/dev/null
@@ -40,7 +58,7 @@ tmux send-keys -t $SESSION:0.1 'ros2 launch turtlebot3_navigation2 navigation2.l
 tmux new-window -t $SESSION -n 'XAI_Brain'
 
 # Pane 0 (Left): XAI Navigator Node
-tmux send-keys -t $SESSION:1 "export GEMINI_API_KEY='$API_KEY'" C-m
+tmux send-keys -t $SESSION:1 "export GEMINI_API_KEY='$GEMINI_API_KEY'" C-m
 tmux send-keys -t $SESSION:1 'echo "Launching XAI Navigator..."' C-m
 tmux send-keys -t $SESSION:1 'ros2 launch xai_navigation_pkg xai_navigator.launch.py enable_explanations:=true' C-m
 

@@ -185,7 +185,7 @@ websockets==12.0
 openai==1.12.0
 
 # Google AI (Gemini)
-google-generativeai==0.3.2
+google-genai==1.52.0
 
 # Database
 sqlalchemy==2.0.25

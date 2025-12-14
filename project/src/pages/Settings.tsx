@@ -32,13 +32,13 @@ export const Settings: React.FC = () => {
         
         <div>
           <label className="block text-sm font-medium text-slate-400 mb-2">
-            OpenAI API Key
+            Gemini API Key
           </label>
           <input
             type="password"
             value={openaiKey}
             onChange={(e) => setOpenaiKey(e.target.value)}
-            placeholder="sk-..."
+            placeholder="AIza..."
             className="w-full p-2 bg-slate-900 border border-slate-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>

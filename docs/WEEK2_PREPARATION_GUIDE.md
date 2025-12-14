@@ -167,14 +167,15 @@ class RobotIntent(BaseModel):
     confidence: float
     explanation: str
 
-# Usage
-model = genai.GenerativeModel('gemini-2.0-flash')
-result = model.generate_content(
-    prompt,
-    generation_config={
-        "response_mime_type": "application/json",
-        "response_schema": RobotIntent
-    }
+# Usage (New SDK)
+client = genai.Client(api_key=api_key)
+result = client.models.generate_content(
+    model='gemini-2.5-flash-preview-09-2025',
+    contents=prompt,
+    config=types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_schema=RobotIntent
+    )
 )
 ```
 

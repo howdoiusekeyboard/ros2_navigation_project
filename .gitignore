@@ -39,3 +39,8 @@ backend/venv/
 *.log
 backend/.env
 CLAUDE.md
+/new_sem/screenshots
+backend/env
+backend/data/conversations.db-wal
+backend/data/conversations.db-shm
+backend/.env

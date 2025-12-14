@@ -8,11 +8,21 @@ echo "========================================="
 echo "Voice-Controlled Robot Backend Server"
 echo "========================================="
 
+# Source ROS2 Humble (required for rclpy)
+if [ -f "/opt/ros/humble/setup.bash" ]; then
+    echo "Sourcing ROS2 Humble..."
+    source /opt/ros/humble/setup.bash
+else
+    echo "ERROR: ROS2 Humble not found at /opt/ros/humble"
+    echo "Install with: sudo apt install ros-humble-desktop"
+    exit 1
+fi
+
 # Check if virtual environment exists and is valid
 if [ ! -f "venv/bin/activate" ]; then
     echo "Virtual environment not found or invalid. Creating..."
     rm -rf venv
-    python3 -m venv venv
+    python3 -m venv venv --system-site-packages
     echo "Installing dependencies..."
     source venv/bin/activate
     pip install --upgrade pip
@@ -49,5 +59,10 @@ echo ""
 echo "Press Ctrl+C to stop"
 echo ""
 
-# Run server
-python3 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Trap Ctrl+C for clean shutdown
+trap 'echo ""; echo "Shutting down backend server..."; exit 0' INT TERM
+
+# Run server without --reload to fix double Ctrl+C issue
+# Note: Auto-reload disabled for clean signal handling
+# For development with auto-reload: add --reload flag (requires 2x Ctrl+C)
+python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000

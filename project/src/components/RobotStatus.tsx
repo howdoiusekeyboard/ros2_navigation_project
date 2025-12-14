@@ -1,93 +1,127 @@
-import React from 'react';
-import { Battery, Cpu, MapPin, Signal, ThermometerSun } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Battery, Cpu, MapPin, Signal, Navigation } from 'lucide-react';
+import { rosService, RobotPose } from '../services/rosService';
+
+interface RobotState {
+  pose: RobotPose | null;
+  battery: number | null; // Not available in turtlesim
+  cpuTemp: number | null; // Not available in turtlesim
+  connectionQuality: number;
+  lastExplanation: string | null;
+}
 
 export const RobotStatus: React.FC = () => {
-  // These would come from ROS2 topics in a real implementation
-  const status = {
-    batteryPercentage: 78,
-    location: 'Living Room',
-    cpuTemp: 42.5,
-    connectionStrength: 95,
-    lastCommand: 'Go to the table, wait 5 seconds, return to base',
-    navigationStatus: 'Moving to target',
-    executionProgress: 1, // 0-2 for the 3 steps in the compound command
-  };
-  
+  const [robotState, setRobotState] = useState<RobotState>({
+    pose: null,
+    battery: null,
+    cpuTemp: null,
+    connectionQuality: 0,
+    lastExplanation: null
+  });
+
+  useEffect(() => {
+    // Subscribe to robot pose updates (real-time)
+    const poseCallback = (pose: RobotPose) => {
+      setRobotState(prev => ({ ...prev, pose }));
+    };
+    rosService.onPoseChange(poseCallback);
+
+    // Subscribe to connection status changes
+    const statusCallback = (status: string) => {
+      const quality = rosService.getConnectionStatus() === 'connected' ? 100 : 0;
+      setRobotState(prev => ({ ...prev, connectionQuality: quality }));
+    };
+    rosService.onStatusChange(statusCallback);
+
+    // Subscribe to explanations for current execution context
+    const explanationCallback = (explanation: any) => {
+      setRobotState(prev => ({
+        ...prev,
+        lastExplanation: explanation.text || 'Processing...'
+      }));
+    };
+    rosService.onExplanationReceived(explanationCallback);
+
+    // Set initial connection quality
+    const initialQuality = rosService.getConnectionStatus() === 'connected' ? 100 : 0;
+    setRobotState(prev => ({ ...prev, connectionQuality: initialQuality }));
+
+    // Cleanup not needed - callbacks persist for app lifetime
+  }, []);
+
   return (
     <div className="bg-slate-800 rounded-lg p-6">
       <h2 className="text-xl font-bold mb-4">Robot Status</h2>
-      
+
       <div className="space-y-5">
         <div className="grid grid-cols-2 gap-4">
-          <StatusItem 
+          {/* Battery - Show N/A for turtlesim */}
+          <StatusItem
             icon={<Battery className="h-5 w-5" />}
             label="Battery"
-            value={`${status.batteryPercentage}%`}
+            value={robotState.battery !== null ? `${robotState.battery}%` : 'N/A'}
             colorClass={
-              status.batteryPercentage > 50 ? "text-green-400" :
-              status.batteryPercentage > 20 ? "text-amber-400" : "text-red-400"
+              robotState.battery !== null
+                ? (robotState.battery > 50 ? "text-green-400" :
+                   robotState.battery > 20 ? "text-amber-400" : "text-red-400")
+                : "text-slate-500"
             }
+            subtitle={robotState.battery === null ? "(Turtlesim mode)" : undefined}
           />
-          
-          <StatusItem 
+
+          {/* Location - Real pose data */}
+          <StatusItem
             icon={<MapPin className="h-5 w-5" />}
-            label="Location"
-            value={status.location}
+            label="Position"
+            value={
+              robotState.pose
+                ? `(${robotState.pose.x.toFixed(2)}, ${robotState.pose.y.toFixed(2)})`
+                : 'Waiting...'
+            }
             colorClass="text-blue-400"
+            subtitle={robotState.pose ? `θ: ${robotState.pose.theta.toFixed(2)} rad` : undefined}
           />
-          
-          <StatusItem 
+
+          {/* CPU Temp - Show N/A for turtlesim */}
+          <StatusItem
             icon={<Cpu className="h-5 w-5" />}
             label="CPU Temp"
-            value={`${status.cpuTemp}°C`}
+            value={robotState.cpuTemp !== null ? `${robotState.cpuTemp}°C` : 'N/A'}
             colorClass={
-              status.cpuTemp < 50 ? "text-green-400" :
-              status.cpuTemp < 75 ? "text-amber-400" : "text-red-400"
+              robotState.cpuTemp !== null
+                ? (robotState.cpuTemp < 50 ? "text-green-400" :
+                   robotState.cpuTemp < 75 ? "text-amber-400" : "text-red-400")
+                : "text-slate-500"
             }
+            subtitle={robotState.cpuTemp === null ? "(Turtlesim mode)" : undefined}
           />
-          
-          <StatusItem 
+
+          {/* Connection - Real rosbridge status */}
+          <StatusItem
             icon={<Signal className="h-5 w-5" />}
             label="Connection"
-            value={`${status.connectionStrength}%`}
+            value={`${robotState.connectionQuality}%`}
             colorClass={
-              status.connectionStrength > 80 ? "text-green-400" :
-              status.connectionStrength > 40 ? "text-amber-400" : "text-red-400"
+              robotState.connectionQuality > 80 ? "text-green-400" :
+              robotState.connectionQuality > 40 ? "text-amber-400" :
+              robotState.connectionQuality > 0 ? "text-red-400" : "text-slate-500"
             }
+            subtitle={rosService.getConnectionStatus()}
           />
         </div>
-        
-        <div className="border-t border-slate-700 pt-4">
-          <h3 className="text-sm font-medium text-slate-400 mb-2">Current Execution</h3>
-          
-          {status.lastCommand && (
-            <div className="bg-slate-700 p-3 rounded-md mb-3">
-              <p className="text-sm font-mono text-slate-300">{status.lastCommand}</p>
-              <p className="text-xs text-slate-400 mt-1">{status.navigationStatus}</p>
-            </div>
-          )}
-          
-          <div className="relative pt-1">
-            <div className="flex mb-2 items-center justify-between">
-              <div>
-                <span className="text-xs font-semibold inline-block text-blue-500">
-                  Step {status.executionProgress + 1} of 3
-                </span>
-              </div>
-              <div className="text-right">
-                <span className="text-xs font-semibold inline-block text-blue-500">
-                  33%
-                </span>
-              </div>
-            </div>
-            <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-slate-700">
-              <div
-                style={{ width: "33%" }}
-                className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"
-              ></div>
+
+        {/* Current Execution / Explanation */}
+        {robotState.lastExplanation && (
+          <div className="border-t border-slate-700 pt-4">
+            <h3 className="text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
+              <Navigation className="h-4 w-4" />
+              Latest Navigation Event
+            </h3>
+            <div className="bg-slate-700 p-3 rounded-md">
+              <p className="text-sm text-slate-300">{robotState.lastExplanation}</p>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -98,9 +132,10 @@ interface StatusItemProps {
   label: string;
   value: string;
   colorClass: string;
+  subtitle?: string;
 }
 
-const StatusItem: React.FC<StatusItemProps> = ({ icon, label, value, colorClass }) => {
+const StatusItem: React.FC<StatusItemProps> = ({ icon, label, value, colorClass, subtitle }) => {
   return (
     <div className="flex items-center space-x-3">
       <div className={`${colorClass}`}>
@@ -109,6 +144,7 @@ const StatusItem: React.FC<StatusItemProps> = ({ icon, label, value, colorClass 
       <div>
         <p className="text-xs text-slate-400">{label}</p>
         <p className={`text-sm font-medium ${colorClass}`}>{value}</p>
+        {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
       </div>
     </div>
   );

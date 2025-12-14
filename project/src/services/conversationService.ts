@@ -67,7 +67,8 @@ class ConversationService {
   constructor(config?: ConversationServiceConfig) {
     this.baseUrl = config?.baseUrl || import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
     this.timeout = config?.timeout || 10000; // 10 seconds
-    this.sessionStorageKey = config?.sessionStorageKey || 'robot_conversation_session_id';
+    // IMPORTANT: Use same key as backendService for session ID consistency
+    this.sessionStorageKey = config?.sessionStorageKey || 'conversation_session_id';
 
     // Load session ID from localStorage
     this.currentSessionId = this.loadSessionFromStorage();

@@ -291,6 +291,57 @@ class BackendService {
   }
 
   /**
+   * Get conversation history for a session
+   *
+   * @param sessionId - Session ID (defaults to current session from localStorage)
+   * @returns Conversation history with commands and responses
+   */
+  async getConversationHistory(sessionId?: string): Promise<any> {
+    try {
+      const sid = sessionId || this.getCurrentSessionId();
+
+      const response = await fetch(`${this.baseUrl}/api/v1/conversation/history/${sid}`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(5000)
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return { turns: [] }; // Empty history for new session
+        }
+        throw new Error(`Failed to get conversation history: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      console.error('Failed to get conversation history:', error);
+      return { turns: [] }; // Return empty on error
+    }
+  }
+
+  /**
+   * Get current session ID from localStorage or create new one
+   */
+  getCurrentSessionId(): string {
+    let sessionId = localStorage.getItem('conversation_session_id');
+
+    if (!sessionId) {
+      // Generate new session ID: timestamp-random
+      sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      localStorage.setItem('conversation_session_id', sessionId);
+    }
+
+    return sessionId;
+  }
+
+  /**
+   * Clear current session (start fresh)
+   */
+  clearCurrentSession(): void {
+    localStorage.removeItem('conversation_session_id');
+  }
+
+  /**
    * Get backend base URL
    */
   getBaseUrl(): string {

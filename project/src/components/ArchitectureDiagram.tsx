@@ -39,11 +39,11 @@ export const ArchitectureDiagram: React.FC = () => {
                     <p className="text-xs text-slate-400 mt-1">Speech-to-Text</p>
                   </div>
                   <div className="bg-purple-900/30 border border-purple-700/50 rounded-md p-3 text-center">
-                    <p className="text-sm font-medium text-purple-400">Supermemory.ai</p>
+                    <p className="text-sm font-medium text-purple-400">Conversation DB</p>
                     <p className="text-xs text-slate-400 mt-1">Context Management</p>
                   </div>
                   <div className="bg-purple-900/30 border border-purple-700/50 rounded-md p-3 text-center">
-                    <p className="text-sm font-medium text-purple-400">GPT-4 API</p>
+                    <p className="text-sm font-medium text-purple-400">Gemini 2.5 Flash</p>
                     <p className="text-xs text-slate-400 mt-1">Command Parsing</p>
                   </div>
                   <div className="bg-purple-900/30 border border-purple-700/50 rounded-md p-3 text-center">
@@ -118,8 +118,8 @@ export const ArchitectureDiagram: React.FC = () => {
           <ol className="list-decimal pl-5 space-y-2 text-slate-300">
             <li>User speaks or types a command (e.g., "Go to the table, wait for 5 seconds, then return to base")</li>
             <li>Whisper API converts speech to text (if voice input was used)</li>
-            <li>Command is stored in supermemory.ai and relevant context is retrieved</li>
-            <li>GPT-4 parses the command with context into structured JSON format</li>
+            <li>Command is stored in conversation database and relevant context is retrieved</li>
+            <li>Gemini 2.5 Flash parses the command with context into structured JSON format</li>
             <li>Command Validator checks for safety constraints and feasibility</li>
             <li>Parsed command is sent to the ROS2 Command Executor node</li>
             <li>For compound commands, the Behavior FSM manages the sequence execution</li>

@@ -49,7 +49,7 @@ export const RobotDashboard: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold">Robot Control System</h1>
-          <p className="text-slate-400">ROS2 + GPT-4 Integration</p>
+          <p className="text-slate-400">ROS2 + Gemini 2.5 Flash Integration</p>
         </div>
 
         <div className="flex gap-2">

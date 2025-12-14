@@ -1,11 +1,12 @@
 """
 Gemini Command Parsing Service
 
-Uses Google Gemini 2.0 Flash to parse natural language commands
+Uses Google Gemini 2.5 Flash (September 2025 Preview) to parse natural language commands
 into structured robot actions with safety validation.
 """
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from typing import Dict, Any, Optional, List
 from pydantic import BaseModel, Field, validator
 from loguru import logger
@@ -103,31 +104,27 @@ class GeminiCommandParser:
     MAX_DISTANCE = 5.0  # meters (safety limit)
     MAX_ANGLE = 6.28  # radians (2π, full rotation)
 
-    def __init__(self, api_key: str, model_name: str = "gemini-2.0-flash-exp"):
+    def __init__(self, api_key: str, model_name: str = "gemini-2.5-flash-preview-09-2025"):
         """
         Initialize Gemini parser
 
         Args:
             api_key: Google AI API key
-            model_name: Gemini model to use (default: gemini-2.0-flash-exp)
+            model_name: Gemini model to use (default: gemini-2.5-flash-preview-09-2025)
         """
         self.api_key = api_key
         self.model_name = model_name
 
-        # Configure Gemini
-        genai.configure(api_key=api_key)
+        # Initialize Gemini client with new SDK
+        self.client = genai.Client(api_key=api_key)
 
-        # Create model with generation config
-        self.generation_config = {
-            "temperature": 0.3,  # Low temperature for consistent parsing
-            "top_p": 0.95,
-            "top_k": 40,
-            "max_output_tokens": 512,
-        }
-
-        self.model = genai.GenerativeModel(
-            model_name=model_name,
-            generation_config=self.generation_config
+        # Generation config (will be passed to each API call)
+        self.generation_config = types.GenerateContentConfig(
+            temperature=0.3,  # Low temperature for consistent parsing
+            top_p=0.95,
+            top_k=40,
+            max_output_tokens=2048,  # Increased for Gemini 2.5 thinking tokens + JSON output
+            response_mime_type="application/json",  # Force JSON output (Gemini 2.5+)
         )
 
         logger.info(f"Gemini Command Parser initialized: {model_name}")
@@ -163,6 +160,7 @@ class GeminiCommandParser:
 
         except Exception as e:
             logger.error(f"Command parsing failed: {e}")
+            logger.exception("Full traceback:")  # Log full exception details
             return RobotCommand(
                 action=ActionType.UNKNOWN,
                 parameters={},
@@ -230,29 +228,53 @@ class GeminiCommandParser:
         # Build prompt with JSON schema
         prompt = self._build_parsing_prompt(command, context)
 
-        # Call Gemini
-        response = self.model.generate_content(prompt)
+        # Call Gemini with new SDK
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+            config=self.generation_config
+        )
 
         # Extract JSON from response
         import json
         import re
 
+        # Handle None response or empty text
+        if not response or not response.text:
+            logger.error(f"Gemini returned empty response. Response object: {response}")
+            raise ValueError("Gemini returned empty or None response")
+
         response_text = response.text.strip()
 
-        # Try to extract JSON from markdown code blocks or raw text
-        json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response_text, re.DOTALL)
-        if json_match:
-            json_str = json_match.group(1)
-        else:
-            # Try to find JSON directly
-            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(0)
-            else:
-                raise ValueError(f"No JSON found in Gemini response: {response_text}")
+        # Log response for debugging (first 500 chars)
+        logger.debug(f"Gemini response (first 500 chars): {response_text[:500]}")
 
-        # Parse JSON
-        parsed_data = json.loads(json_str)
+        # With response_mime_type="application/json", Gemini should return pure JSON
+        # But we'll keep fallback logic for robustness
+
+        # Try parsing as pure JSON first (expected with json mime type)
+        try:
+            parsed_data = json.loads(response_text)
+        except json.JSONDecodeError as e:
+            # Fallback: Try to extract JSON from markdown code blocks
+            logger.warning(f"Direct JSON parse failed, trying markdown extraction: {e}")
+            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response_text, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(1)
+            else:
+                # Try to find JSON object in text
+                json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+                if json_match:
+                    json_str = json_match.group(0)
+                else:
+                    logger.error(f"No JSON found in Gemini response. Full response:\n{response_text}")
+                    raise ValueError(f"No JSON found in Gemini response: {response_text[:200]}")
+
+            try:
+                parsed_data = json.loads(json_str)
+            except json.JSONDecodeError as e2:
+                logger.error(f"JSON parsing failed. Extracted text:\n{json_str}")
+                raise ValueError(f"Invalid JSON in response: {e2}")
 
         # Create RobotCommand
         return RobotCommand(
@@ -434,7 +456,7 @@ Now parse this command and return ONLY the JSON output:
 gemini_parser: Optional[GeminiCommandParser] = None
 
 
-def initialize_gemini(api_key: str, model_name: str = "gemini-2.0-flash-exp"):
+def initialize_gemini(api_key: str, model_name: str = "gemini-2.5-flash-preview-09-2025"):
     """Initialize global Gemini parser"""
     global gemini_parser
     gemini_parser = GeminiCommandParser(api_key=api_key, model_name=model_name)

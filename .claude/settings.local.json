@@ -36,7 +36,10 @@
       "Bash(git check-ignore:*)",
       "Bash(xargs -I {} sh -c \"if [ -d \"\"{}\"\" ]; then du -sh \"\"{}\"\"; fi\")",
       "Bash(curl:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "Bash(lsof:*)"
     ]
   },
   "outputStyle": "Explanatory"

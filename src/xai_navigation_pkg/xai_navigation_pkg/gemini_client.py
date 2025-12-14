@@ -46,16 +46,16 @@ class GeminiClient:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "gemini-flash-latest",
+        model: str = "gemini-2.5-flash-preview-09-2025",
         max_retries: int = 3,
         timeout: float = 5.0
     ):
         """
         Initialize Gemini client.
-        
+
         Args:
             api_key: Gemini API key (defaults to GEMINI_API_KEY env var)
-            model: Model to use (gemini-flash-latest for speed)
+            model: Model to use (gemini-2.5-flash-preview-09-2025 September 2025 preview)
             max_retries: Maximum retry attempts on failure
             timeout: Request timeout in seconds
         """

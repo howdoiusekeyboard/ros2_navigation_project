@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Play, Save } from 'lucide-react';
 
 export const CommandControl: React.FC = () => {
-  const [model, setModel] = useState('GPT-4');
+  const model = 'Gemini 2.5 Flash'; // Fixed model, configured in backend
   const [temperature, setTemperature] = useState(0.7);
   const [systemPrompt, setSystemPrompt] = useState(
     'You are a robot assistant capable of understanding and executing navigation and interaction commands. Parse the user\'s input into a structured JSON format with command type, parameters, and any conditions.'
@@ -23,16 +23,12 @@ export const CommandControl: React.FC = () => {
       <div className="bg-slate-800 rounded-lg p-6 space-y-6">
         <div>
           <label className="block text-sm font-medium text-slate-400 mb-2">
-            GPT Model
+            AI Model
           </label>
-          <select
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="w-full p-2 bg-slate-900 border border-slate-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="GPT-4">GPT-4</option>
-            <option value="GPT-3.5-Turbo">GPT-3.5-Turbo</option>
-          </select>
+          <div className="w-full p-2 bg-slate-900 border border-slate-700 rounded-md text-white">
+            {model}
+          </div>
+          <p className="text-xs text-slate-500 mt-1">Configured in backend</p>
         </div>
         
         <div>
