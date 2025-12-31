@@ -8,7 +8,7 @@
 
 A **functional voice-controlled robot system** with:
 - ✅ ROS2 Humble Nav2 navigation stack (fully built)
-- ✅ Web dashboard with voice input (Web Speech API)
+- ✅ Web dashboard with voice input (MediaRecorder → Backend OpenAI Speech-to-Text)
 - ✅ Gemini 2.0 Flash integration for command parsing
 - ✅ Real-time ROS2 communication via rosbridge
 - ✅ Fallback regex parser (works even without Gemini API)
@@ -65,7 +65,7 @@ This starts **ALL** components automatically:
 ### Architecture Flow
 
 ```
-Your Voice → Web Speech API → Gemini 2.0 Flash → Command Parser
+Your Voice → MediaRecorder (browser) → Backend OpenAI Speech-to-Text → Gemini → Command Parser
                                      ↓
                               Structured JSON
                                      ↓
@@ -78,7 +78,7 @@ Your Voice → Web Speech API → Gemini 2.0 Flash → Command Parser
 
 ### What Happens When You Say "Spin in a Circle"
 
-1. **Web Speech API** converts speech to text: `"spin in a circle"`
+1. **Backend STT (OpenAI)** converts speech to text: `"spin in a circle"`
 2. **Gemini** parses it to JSON:
    ```json
    {
@@ -120,7 +120,7 @@ This ensures basic functionality even offline or with API issues.
    - Built-in fallback parser for offline operation
 
 3. **speechService.ts** - Voice input handling
-   - Web Speech API integration (Chrome/Edge only)
+   - MediaRecorder-based capture + backend transcription (no Web Speech API)
    - Real-time interim transcripts
    - Automatic error handling and recovery
    - Permission management
@@ -252,7 +252,7 @@ publishNavGoal(goal: NavigateToPoseGoal) {
    ```bash
    sudo usermod -a -G audio $USER
    ```
-3. Use Chrome or Edge (Firefox doesn't support Web Speech API)
+3. Use a modern browser with MediaRecorder support (Chrome/Edge recommended)
 
 ### Issue: "Gemini API error"
 
@@ -298,7 +298,7 @@ rm -rf node_modules dist
 
 ### ✅ What Works NOW
 
-- **Voice input:** Web Speech API (Chrome/Edge only)
+- **Voice input:** MediaRecorder → Backend OpenAI Speech-to-Text
 - **Command parsing:** Gemini 2.0 Flash + fallback regex
 - **Robot control:** Twist messages to `/turtle1/cmd_vel`
 - **Status monitoring:** ROS connection, processing state
@@ -316,7 +316,7 @@ rm -rf node_modules dist
 
 - **Turtlesim only:** Web UI currently publishes to `/turtle1/cmd_vel`
 - **No Nav2 integration:** Can control navigation stack, but requires manual topic change
-- **Chrome/Edge only:** Web Speech API not supported in Firefox/Safari
+- **Browser support:** requires MediaRecorder (supported by modern Chrome/Edge; Firefox generally works too depending on codecs)
 - **English only:** Speech recognition configured for en-US
 
 ---
@@ -429,7 +429,7 @@ cd /home/noob/ros2_navigation_project/project
 - **ROS2 Basics:** https://docs.ros.org/en/humble/Tutorials.html
 - **Nav2 Navigation:** https://navigation.ros.org/
 - **Gemini API:** https://ai.google.dev/gemini-api/docs
-- **Web Speech API:** https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API
+- **MediaRecorder:** https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder
 
 ### Key Concepts
 

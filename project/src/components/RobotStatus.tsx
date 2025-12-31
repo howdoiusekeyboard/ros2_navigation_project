@@ -42,6 +42,11 @@ export const RobotStatus: React.FC = () => {
     };
     rosService.onExplanationReceived(explanationCallback);
 
+    // Subscribe to battery state
+    rosService.onBattery((battery) => {
+      setRobotState(prev => ({ ...prev, battery: Math.round(battery.percentage) }));
+    });
+
     // Set initial connection quality
     const initialQuality = rosService.getConnectionStatus() === 'connected' ? 100 : 0;
     setRobotState(prev => ({ ...prev, connectionQuality: initialQuality }));

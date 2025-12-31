@@ -8,7 +8,7 @@ python-multipart==0.0.6
 websockets==12.0
 
 # OpenAI (Whisper API)
-openai==1.12.0
+openai==2.13.0
 
 # Google AI (Gemini - server-side validation)
 google-genai==1.52.0

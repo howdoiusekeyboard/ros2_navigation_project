@@ -11,12 +11,32 @@ Week 1: Skeleton with sensor comparison and feature extraction.
 
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 from std_msgs.msg import Float32, String
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
 import json
 import math
+import os
+import pickle
+import time
+from typing import Any, Dict, List, Optional
+
+try:
+    import numpy as np
+except Exception:  # pragma: no cover
+    np = None
+
+try:
+    from sklearn.ensemble import IsolationForest
+except Exception:  # pragma: no cover
+    IsolationForest = None
+
+try:
+    import shap
+except Exception:  # pragma: no cover
+    shap = None
 
 
 class DigitalTwinMonitorNode(Node):
@@ -41,16 +61,43 @@ class DigitalTwinMonitorNode(Node):
         # Parameters
         self.declare_parameter('anomaly_threshold', -0.5)
         self.declare_parameter('update_rate', 10.0)  # Hz
+        self.declare_parameter('model_path', '~/.ros/digital_twin/anomaly_model.pkl')
+        self.declare_parameter('training_mode', False)
+        self.declare_parameter('baseline_samples', 600)  # 60s @ 10Hz
+        self.declare_parameter('shap_enabled', True)
+        self.declare_parameter('shap_min_interval_sec', 2.0)  # rate-limit SHAP
 
         self.anomaly_threshold = self.get_parameter('anomaly_threshold').value
         self.update_rate = self.get_parameter('update_rate').value
+        self.model_path = os.path.expanduser(self.get_parameter('model_path').value)
+        self.training_mode = bool(self.get_parameter('training_mode').value)
+        self.baseline_samples = int(self.get_parameter('baseline_samples').value)
+        self.shap_enabled = bool(self.get_parameter('shap_enabled').value)
+        self.shap_min_interval_sec = float(self.get_parameter('shap_min_interval_sec').value)
 
         # State
         self.real_odom = None
         self.twin_odom = None
         self.real_scan = None
         self.twin_scan = None
-        self.anomaly_model = None  # Will be loaded in Week 6
+        self.anomaly_model: Optional[Any] = None
+        self._feature_names = [
+            "position_diff_x",
+            "position_diff_y",
+            "position_diff_total",
+            "orientation_diff",
+            "linear_vel_diff",
+            "angular_vel_diff",
+            "scan_diff_mean",
+            "scan_diff_max",
+            "scan_diff_variance",
+        ]
+        self._training_buffer: List[List[float]] = []
+        self._shap_explainer = None
+        self._last_shap_time = 0.0
+
+        # Try load trained model (optional; node still works without it)
+        self._try_load_model()
 
         # Publishers
         self.anomaly_score_pub = self.create_publisher(
@@ -63,6 +110,13 @@ class DigitalTwinMonitorNode(Node):
             String, '/twin/sensor_diff', 10
         )
 
+        # QoS profile for sensor data (BEST_EFFORT to match TurtleBot3 lidar)
+        sensor_qos = QoSProfile(
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=10
+        )
+
         # Subscribers
         self.real_odom_sub = self.create_subscription(
             Odometry, '/real/odom', self.real_odom_callback, 10
@@ -70,11 +124,12 @@ class DigitalTwinMonitorNode(Node):
         self.twin_odom_sub = self.create_subscription(
             Odometry, '/twin/odom', self.twin_odom_callback, 10
         )
+        # Use BEST_EFFORT QoS for scan topics to match TurtleBot3 lidar
         self.real_scan_sub = self.create_subscription(
-            LaserScan, '/real/scan', self.real_scan_callback, 10
+            LaserScan, '/real/scan', self.real_scan_callback, sensor_qos
         )
         self.twin_scan_sub = self.create_subscription(
-            LaserScan, '/twin/scan', self.twin_scan_callback, 10
+            LaserScan, '/twin/scan', self.twin_scan_callback, sensor_qos
         )
 
         # Timer for periodic comparison
@@ -85,6 +140,54 @@ class DigitalTwinMonitorNode(Node):
         self.get_logger().info('Digital Twin Monitor Node initialized')
         self.get_logger().info(f'Anomaly threshold: {self.anomaly_threshold}')
         self.get_logger().info(f'Update rate: {self.update_rate} Hz')
+        self.get_logger().info(f'Training mode: {self.training_mode} (baseline_samples={self.baseline_samples})')
+        self.get_logger().info(f'Model path: {self.model_path}')
+        if self.anomaly_model is None:
+            self.get_logger().warn('No anomaly model loaded. Using heuristic scoring until model is trained/available.')
+        if self.shap_enabled and shap is None:
+            self.get_logger().warn('SHAP not installed; anomaly explanations will be heuristic-only.')
+        if IsolationForest is None:
+            self.get_logger().warn('scikit-learn not installed; ML training/loading disabled.')
+
+    def _try_load_model(self) -> None:
+        """Load persisted IsolationForest model from disk if available."""
+        try:
+            if not os.path.exists(self.model_path):
+                return
+
+            with open(self.model_path, "rb") as f:
+                payload = pickle.load(f)
+
+            # Accept either raw model or payload dict
+            if isinstance(payload, dict) and "model" in payload:
+                self.anomaly_model = payload["model"]
+                feature_names = payload.get("feature_names")
+                if isinstance(feature_names, list) and feature_names:
+                    self._feature_names = feature_names
+            else:
+                self.anomaly_model = payload
+
+            self.get_logger().info("Loaded anomaly model from disk")
+        except Exception as e:
+            self.get_logger().error(f"Failed to load anomaly model: {e}")
+            self.anomaly_model = None
+
+    def _persist_model(self) -> None:
+        """Persist trained model to disk."""
+        try:
+            os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
+            with open(self.model_path, "wb") as f:
+                pickle.dump(
+                    {"model": self.anomaly_model, "feature_names": self._feature_names, "created_at": time.time()},
+                    f,
+                )
+            self.get_logger().info(f"Saved anomaly model to {self.model_path}")
+        except Exception as e:
+            self.get_logger().error(f"Failed to save anomaly model: {e}")
+
+    def _features_to_vector(self, features: Dict[str, float]) -> List[float]:
+        """Convert feature dict to consistent ordered vector."""
+        return [float(features.get(name, 0.0) or 0.0) for name in self._feature_names]
 
     def real_odom_callback(self, msg: Odometry):
         """Store real robot odometry."""
@@ -112,6 +215,22 @@ class DigitalTwinMonitorNode(Node):
 
         # Extract features
         features = self._extract_features()
+
+        # Optional training mode: collect baseline and train IsolationForest
+        if self.training_mode and self.anomaly_model is None and IsolationForest is not None and np is not None:
+            self._training_buffer.append(self._features_to_vector(features))
+            if len(self._training_buffer) >= self.baseline_samples:
+                self.get_logger().info(f"Training IsolationForest on {len(self._training_buffer)} samples...")
+                X = np.asarray(self._training_buffer, dtype=float)
+                self.anomaly_model = IsolationForest(
+                    n_estimators=200,
+                    contamination="auto",
+                    random_state=42,
+                )
+                self.anomaly_model.fit(X)
+                self._persist_model()
+                self._training_buffer = []
+                self.get_logger().info("Training complete. Switching to ML-based anomaly scoring.")
 
         # Publish sensor differences
         self._publish_sensor_diff(features)
@@ -183,11 +302,16 @@ class DigitalTwinMonitorNode(Node):
         """
         Compute anomaly score from features.
 
-        Week 6: Use trained Isolation Forest model.
-        Week 1: Simple threshold-based scoring.
+        If model is available: IsolationForest decision_function (higher = more normal).
+        Otherwise: heuristic scoring fallback (keeps node usable without ML deps).
         """
-        # Simple scoring based on position deviation
-        # Will be replaced with ML model in Week 6
+        # ML scoring
+        if self.anomaly_model is not None and np is not None:
+            try:
+                vec = np.asarray([self._features_to_vector(features)], dtype=float)
+                return float(self.anomaly_model.decision_function(vec)[0])
+            except Exception as e:
+                self.get_logger().error(f"ML scoring failed; falling back to heuristic. Error: {e}")
 
         if 'position_diff_total' not in features:
             return 0.0
@@ -231,7 +355,7 @@ class DigitalTwinMonitorNode(Node):
             'score': score,
             'threshold': self.anomaly_threshold,
             'features': features,
-            'explanation': self._generate_anomaly_explanation(features),
+            'explanation': self._generate_anomaly_explanation(features, score=score),
             'severity': self._compute_severity(score),
             'recommended_action': self._recommend_action(score)
         }
@@ -242,13 +366,50 @@ class DigitalTwinMonitorNode(Node):
 
         self.get_logger().warn(f'ANOMALY DETECTED: score={score:.3f}')
 
-    def _generate_anomaly_explanation(self, features: dict) -> str:
+    def _generate_anomaly_explanation(self, features: dict, score: float) -> str:
         """
         Generate human-readable explanation for anomaly.
 
-        Week 6: Use SHAP for feature importance.
-        Week 1: Simple feature-based explanation.
+        If SHAP + model are available, provide feature-attribution explanation (rate-limited).
+        Otherwise, provide heuristic explanation.
         """
+        # SHAP-based explanation (only on anomaly, and rate-limited)
+        if (
+            self.shap_enabled
+            and shap is not None
+            and self.anomaly_model is not None
+            and np is not None
+            and (time.time() - self._last_shap_time) >= self.shap_min_interval_sec
+        ):
+            try:
+                self._last_shap_time = time.time()
+                if self._shap_explainer is None:
+                    self._shap_explainer = shap.TreeExplainer(self.anomaly_model)
+
+                x = np.asarray([self._features_to_vector(features)], dtype=float)
+                shap_values = self._shap_explainer.shap_values(x)
+
+                # Normalize to 1D vector
+                if isinstance(shap_values, list):
+                    shap_arr = np.asarray(shap_values[0], dtype=float).reshape(-1)
+                else:
+                    shap_arr = np.asarray(shap_values, dtype=float).reshape(-1)
+
+                idxs = np.argsort(np.abs(shap_arr))[::-1][:3]
+                parts = []
+                for idx in idxs:
+                    name = self._feature_names[int(idx)]
+                    val = float(features.get(name, 0.0) or 0.0)
+                    impact = float(shap_arr[int(idx)])
+                    parts.append(f"{name}={val:.3f} (impact {impact:+.3f})")
+
+                return (
+                    f"Anomaly explanation (SHAP): score={score:.3f}. "
+                    f"Top contributing factors: " + ", ".join(parts)
+                )
+            except Exception as e:
+                self.get_logger().warn(f"SHAP explanation failed; using heuristic explanation. Error: {e}")
+
         explanation_parts = []
 
         pos_diff = features.get('position_diff_total', 0.0)
