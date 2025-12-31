@@ -99,7 +99,7 @@ class DecisionDatabase:
             )
         ''')
 
-        # Obstacle events table
+        # Obstacle events table - Extended for weighted classification
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS obstacle_events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,6 +110,14 @@ class DecisionDatabase:
                 distance_to_robot REAL,
                 severity TEXT,
                 action_taken TEXT,
+                -- NEW: Weighted Classification Fields (Week 4+)
+                obstacle_type TEXT,           -- human, vehicle, furniture, wall, unknown
+                priority_weight REAL,         -- weighted priority score
+                classification_confidence REAL, -- 0.0 to 1.0
+                classification_reasoning TEXT, -- human-readable explanation
+                zone_name TEXT,               -- semantic zone if applicable
+                estimated_velocity REAL,      -- m/s if moving
+                estimated_size REAL,          -- estimated width in meters
                 synced_to_backend INTEGER DEFAULT 0,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (decision_id) REFERENCES navigation_decisions(id)
@@ -262,15 +270,45 @@ class DecisionDatabase:
         obstacle_y: float,
         distance: float,
         severity: str,
-        action: str
+        action: str,
+        # NEW: Classification fields (Week 4+)
+        obstacle_type: Optional[str] = None,
+        priority_weight: Optional[float] = None,
+        classification_confidence: Optional[float] = None,
+        classification_reasoning: Optional[str] = None,
+        zone_name: Optional[str] = None,
+        estimated_velocity: Optional[float] = None,
+        estimated_size: Optional[float] = None
     ) -> int:
-        """Log an obstacle detection event."""
+        """
+        Log an obstacle detection event with optional classification.
+
+        Args:
+            decision_id: Related navigation decision ID
+            obstacle_x, obstacle_y: Obstacle position
+            distance: Distance from robot
+            severity: Severity level (critical, warning, info)
+            action: Action taken (detected, stop, replan)
+            obstacle_type: Classification type (human, vehicle, furniture, wall, unknown)
+            priority_weight: Weighted priority score
+            classification_confidence: Confidence in classification (0.0-1.0)
+            classification_reasoning: Human-readable explanation
+            zone_name: Semantic zone name if applicable
+            estimated_velocity: Estimated velocity in m/s
+            estimated_size: Estimated size in meters
+
+        Returns:
+            Database ID of logged event
+        """
         cursor = self.conn.cursor()
         cursor.execute('''
             INSERT INTO obstacle_events (
                 decision_id, timestamp, obstacle_x, obstacle_y,
-                distance_to_robot, severity, action_taken
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                distance_to_robot, severity, action_taken,
+                obstacle_type, priority_weight, classification_confidence,
+                classification_reasoning, zone_name,
+                estimated_velocity, estimated_size
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             decision_id,
             datetime.now().timestamp(),
@@ -278,7 +316,14 @@ class DecisionDatabase:
             obstacle_y,
             distance,
             severity,
-            action
+            action,
+            obstacle_type,
+            priority_weight,
+            classification_confidence,
+            classification_reasoning,
+            zone_name,
+            estimated_velocity,
+            estimated_size
         ))
 
         self.conn.commit()

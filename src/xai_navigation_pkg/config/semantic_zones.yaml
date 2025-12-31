@@ -1,0 +1,131 @@
+# Semantic Zones Configuration for Weighted Obstacle Analysis
+#
+# Defines regions on the map where different obstacle types are expected.
+# Used for Tesla-style weighted prioritization:
+#   - Human zones: Areas where people are likely to be (hallways, doors)
+#   - Furniture zones: Areas with expected static obstacles
+#   - Restricted zones: Areas the robot should not enter
+#
+# Zone coordinates are in the map frame (meters).
+# Weight multipliers increase the priority of obstacles in that zone.
+
+# These zones are configured for the standard turtlebot3_world Gazebo map
+# Coordinate reference: Origin at center of map, X-right, Y-up
+
+zones:
+  # Central open area - likely pedestrian traffic
+  - name: "central_hallway"
+    type: "human_zone"
+    description: "Central open area with expected foot traffic"
+    bounds:
+      x_min: -1.0
+      x_max: 1.0
+      y_min: -1.5
+      y_max: 1.5
+    weight_multiplier: 2.0
+
+  # Doorway areas - high human traffic
+  - name: "north_entrance"
+    type: "human_zone"
+    description: "Northern entrance/doorway area"
+    bounds:
+      x_min: -0.5
+      x_max: 0.5
+      y_min: 1.5
+      y_max: 2.5
+    weight_multiplier: 2.5
+
+  - name: "south_entrance"
+    type: "human_zone"
+    description: "Southern entrance/doorway area"
+    bounds:
+      x_min: -0.5
+      x_max: 0.5
+      y_min: -2.5
+      y_max: -1.5
+    weight_multiplier: 2.5
+
+  # Corner areas - typically furniture
+  - name: "northeast_corner"
+    type: "furniture_zone"
+    description: "Northeast corner with expected furniture"
+    bounds:
+      x_min: 1.5
+      x_max: 3.0
+      y_min: 1.5
+      y_max: 3.0
+    weight_multiplier: 1.0
+
+  - name: "northwest_corner"
+    type: "furniture_zone"
+    description: "Northwest corner with expected furniture"
+    bounds:
+      x_min: -3.0
+      x_max: -1.5
+      y_min: 1.5
+      y_max: 3.0
+    weight_multiplier: 1.0
+
+  - name: "southeast_corner"
+    type: "furniture_zone"
+    description: "Southeast corner with expected furniture"
+    bounds:
+      x_min: 1.5
+      x_max: 3.0
+      y_min: -3.0
+      y_max: -1.5
+    weight_multiplier: 1.0
+
+  - name: "southwest_corner"
+    type: "furniture_zone"
+    description: "Southwest corner with expected furniture"
+    bounds:
+      x_min: -3.0
+      x_max: -1.5
+      y_min: -3.0
+      y_max: -1.5
+    weight_multiplier: 1.0
+
+  # Wall-adjacent areas - structural obstacles
+  - name: "east_wall"
+    type: "restricted_zone"
+    description: "Area along eastern wall"
+    bounds:
+      x_min: 3.5
+      x_max: 4.5
+      y_min: -3.0
+      y_max: 3.0
+    weight_multiplier: 0.5
+
+  - name: "west_wall"
+    type: "restricted_zone"
+    description: "Area along western wall"
+    bounds:
+      x_min: -4.5
+      x_max: -3.5
+      y_min: -3.0
+      y_max: 3.0
+    weight_multiplier: 0.5
+
+# Default weights for obstacle types (can be overridden in xai_params.yaml)
+default_weights:
+  human: 10.0
+  vehicle: 5.0
+  dynamic: 3.0
+  furniture: 2.0
+  wall: 1.0
+  unknown: 1.5
+
+# Classification thresholds
+thresholds:
+  # Velocity thresholds (m/s)
+  vehicle_velocity_min: 1.5
+  human_velocity_min: 0.3
+  human_velocity_max: 1.5
+
+  # Size thresholds (meters)
+  human_size_max: 0.6
+  furniture_size_min: 0.8
+
+  # Confidence thresholds
+  min_classification_confidence: 0.3

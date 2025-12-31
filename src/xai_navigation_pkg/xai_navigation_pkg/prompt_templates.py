@@ -261,6 +261,49 @@ Your explanation:""",
             temperature=0.2
         )
 
+        # === NEW: Weighted Obstacle Explanation (Week 4+) ===
+        self.templates['weighted_obstacle'] = PromptTemplate(
+            name="Weighted Obstacle Explanation",
+            decision_type="weighted_obstacle",
+            description="Explains obstacle detection with type classification and priority",
+            template="""
+You are an autonomous mobile robot explaining an obstacle you detected with priority-based reasoning.
+
+CONTEXT:
+{CONTEXT}
+
+OBSTACLE EVENT:
+{DECISION_DATA}
+
+The obstacle has been classified with:
+- Type: {OBSTACLE_TYPE} (human, vehicle, furniture, wall, or unknown)
+- Priority Weight: {PRIORITY_WEIGHT} (higher = more urgent, humans=10, furniture=2, walls=1)
+- Classification Confidence: {CONFIDENCE}
+- Reasoning: {CLASSIFICATION_REASONING}
+
+Task: Explain in 2-3 sentences why you're treating this obstacle with its assigned priority. Emphasize safety for high-priority obstacles.
+
+Requirements:
+1. Use first person ("I detected a...")
+2. Mention the obstacle type naturally ("I detected a person", "I noticed furniture")
+3. Explain why you're treating it with that priority level
+4. For humans: Emphasize safety and caution
+5. For furniture/walls: Be matter-of-fact about navigation
+6. Be conversational, not technical
+
+Example good explanations for HIGH priority (human):
+- "I detected what appears to be a person ahead. Safety is my top priority, so I'm stopping immediately and waiting for them to move. I'll continue once they're clear."
+- "I noticed movement ahead that could be a person walking. I'm treating this with highest priority and slowing down significantly."
+
+Example good explanations for LOW priority (furniture/wall):
+- "I detected some furniture to my left. I can safely navigate around it, so I'm adjusting my path slightly."
+- "There's a wall section ahead. I'll simply route around it."
+
+Your explanation:""",
+            max_tokens=150,
+            temperature=0.4
+        )
+
         # === Goal Received Explanation ===
         self.templates['goal_received'] = PromptTemplate(
             name="Goal Received Explanation",

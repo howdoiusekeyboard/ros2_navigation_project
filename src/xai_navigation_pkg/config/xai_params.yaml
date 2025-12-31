@@ -1,5 +1,6 @@
 # XAI Navigator Configuration
 # Week 3: Decision Logging & Data Capture
+# Week 4+: Weighted Obstacle Classification (Tesla-style)
 
 xai_navigator_node:
   ros__parameters:
@@ -32,3 +33,32 @@ xai_navigator_node:
 
     # === Simulation ===
     use_sim_time: true
+
+    # === NEW: Weighted Obstacle Classification (Week 4+) ===
+    enable_obstacle_weighting: true
+    semantic_zones_config: "semantic_zones.yaml"  # relative to config/
+
+    # Priority weights (Tesla-style: humans >> objects)
+    # Higher weight = more urgent to avoid
+    obstacle_weights:
+      human: 10.0      # Highest priority - always protect
+      vehicle: 5.0     # High priority - potential danger
+      dynamic: 3.0     # Moving but unknown type
+      furniture: 2.0   # Static, can navigate around
+      wall: 1.0        # Permanent structure
+      unknown: 1.5     # Default cautious weight
+
+    # Classification thresholds
+    classification:
+      # Velocity thresholds (m/s)
+      vehicle_velocity_threshold: 1.5   # > this = likely vehicle
+      human_velocity_min: 0.3           # Walking speed lower bound
+      human_velocity_max: 1.5           # Walking speed upper bound
+
+      # Size thresholds (meters)
+      human_size_max: 0.6               # Typical human width
+      furniture_size_min: 0.8           # Larger than human
+
+      # Confidence threshold for classification
+      min_confidence: 0.3               # Below this = 'unknown'
+

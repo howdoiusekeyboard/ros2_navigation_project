@@ -3,13 +3,14 @@
 XAI Navigator Node - Main orchestrator for explainable navigation.
 
 Week 3: Full decision logging implementation with all components integrated.
+Week 4+: Extended with weighted obstacle classification (Tesla-style).
 
 Integrates:
 - Nav2Monitor: Action client and navigation event capture
 - DecisionDatabase: Local SQLite storage
 - CostmapProcessor: Costmap analysis
 - PathAnalyzer: Path comparison
-- ObstacleDetector: Obstacle detection
+- ObstacleDetector: Obstacle detection with weighted classification
 - BackendSync: Backend API synchronization
 
 Topics:
@@ -25,6 +26,7 @@ Topics:
         /navigation/decision (std_msgs/String)
         /navigation/explanation (std_msgs/String)
         /navigation/explanation_detailed (std_msgs/String)
+        /navigation/obstacle_classification (std_msgs/String)  # NEW
 """
 
 import json
@@ -171,7 +173,39 @@ class XAINavigatorNode(Node):
         # Processors
         self.costmap_processor = CostmapProcessor()
         self.path_analyzer = PathAnalyzer(deviation_threshold=0.3)
-        self.obstacle_detector = ObstacleDetector()
+
+        # NEW: Configure ObstacleDetector with weighted classification
+        self.declare_parameter('enable_obstacle_weighting', True)
+        self.declare_parameter('semantic_zones_config', 'semantic_zones.yaml')
+
+        enable_weighting = self.get_parameter('enable_obstacle_weighting').value
+        zones_config = self.get_parameter('semantic_zones_config').value
+
+        # Build full path to zones config
+        zones_path = None
+        if zones_config:
+            import ament_index_python
+            try:
+                pkg_share = ament_index_python.get_package_share_directory('xai_navigation_pkg')
+                zones_path = os.path.join(pkg_share, 'config', zones_config)
+                if not os.path.exists(zones_path):
+                    # Try local path
+                    zones_path = os.path.join(
+                        os.path.dirname(__file__), '..', 'config', zones_config
+                    )
+            except Exception:
+                zones_path = None
+
+        self.obstacle_detector = ObstacleDetector(
+            enable_classification=enable_weighting,
+            zones_config_path=zones_path
+        )
+
+        if self.obstacle_detector.classification_enabled:
+            self.get_logger().info('Weighted obstacle classification ENABLED')
+        else:
+            self.get_logger().info('Obstacle classification disabled or not available')
+
         self.telemetry_monitor = TelemetryMonitor() # NEW: Week 3 Apple Standard
 
         # Backend sync
@@ -269,6 +303,11 @@ class XAINavigatorNode(Node):
 
         self.explanation_detailed_pub = self.create_publisher(
             String, '/navigation/explanation_detailed', 10
+        )
+
+        # NEW: Obstacle classification events (Week 4+)
+        self.classification_pub = self.create_publisher(
+            String, '/navigation/obstacle_classification', 10
         )
 
     def _init_timers(self):
@@ -438,7 +477,7 @@ class XAINavigatorNode(Node):
             self.get_logger().error(f'Command error: {e}')
 
     def _periodic_obstacle_check(self):
-        """Periodic check for obstacles on current path."""
+        """Periodic check for obstacles on current path with weighted classification."""
         if not self.nav2_monitor.is_navigating:
             return
 
@@ -448,41 +487,112 @@ class XAINavigatorNode(Node):
         if not self.costmap_processor.has_local_costmap:
             return
 
-        detection = self.obstacle_detector.detect_on_path(
+        # Use detect_and_classify for weighted detection
+        detection = self.obstacle_detector.detect_and_classify(
             self.path_analyzer.previous_path,
             self.costmap_processor
         )
 
         if detection.get('detected') and detection.get('critical_count', 0) > 0:
-            closest = detection.get('closest')
-            if closest:
+            # Get highest priority obstacle (could be different from closest)
+            highest_priority = detection.get('highest_priority') or detection.get('closest')
+
+            if highest_priority:
+                # Extract classification info
+                classification = highest_priority.get('classification', {})
+                obstacle_type = classification.get('obstacle_type', 'unknown')
+                priority_weight = classification.get('priority_weight', 1.0)
+                reasoning = classification.get('reasoning', '')
+
                 self.get_logger().warn(
-                    f'Critical obstacle at ({closest["x"]:.2f}, {closest["y"]:.2f})'
+                    f'Obstacle detected: {obstacle_type} at '
+                    f'({highest_priority["x"]:.2f}, {highest_priority["y"]:.2f}) '
+                    f'[Priority: {priority_weight:.1f}]'
                 )
 
+                # Log decision with classification info
                 self._log_decision('obstacle_detected', {
-                    'obstacle_x': closest['x'],
-                    'obstacle_y': closest['y'],
-                    'severity': closest.get('severity', 'critical'),
-                    'count': detection['total_count']
+                    'obstacle_x': highest_priority['x'],
+                    'obstacle_y': highest_priority['y'],
+                    'severity': highest_priority.get('severity', 'critical'),
+                    'count': detection['total_count'],
+                    'obstacle_type': obstacle_type,
+                    'priority_weight': priority_weight,
+                    'classification_reasoning': reasoning
                 })
 
+                # Log to database with classification
                 if self.enable_logging:
                     self.decision_db.log_obstacle_event(
                         0,
-                        closest['x'],
-                        closest['y'],
-                        closest.get('distance', 0),
-                        closest.get('severity', 'critical'),
-                        'detected'
+                        highest_priority['x'],
+                        highest_priority['y'],
+                        highest_priority.get('distance', 0),
+                        highest_priority.get('severity', 'critical'),
+                        'detected',
+                        # Classification fields
+                        obstacle_type=obstacle_type,
+                        priority_weight=priority_weight,
+                        classification_confidence=classification.get('confidence'),
+                        classification_reasoning=reasoning,
+                        zone_name=classification.get('zone_name'),
+                        estimated_velocity=classification.get('estimated_velocity'),
+                        estimated_size=classification.get('estimated_size')
                     )
 
-                explanation = self.templates['obstacle_detected'].format(
-                    obs_x=closest['x'],
-                    obs_y=closest['y'],
-                    action="Monitoring for path changes."
+                # Generate weighted explanation
+                priority_explanation = self.obstacle_detector.get_priority_explanation(
+                    highest_priority
                 )
+
+                # Format explanation with obstacle type
+                if obstacle_type != 'unknown':
+                    explanation = (
+                        f"I detected a {obstacle_type} at "
+                        f"({highest_priority['x']:.2f}, {highest_priority['y']:.2f}). "
+                        f"{priority_explanation}"
+                    )
+                else:
+                    explanation = self.templates['obstacle_detected'].format(
+                        obs_x=highest_priority['x'],
+                        obs_y=highest_priority['y'],
+                        action="Monitoring for path changes."
+                    )
+
                 self._publish_explanation(explanation)
+
+                # Publish classification event
+                self._publish_classification(highest_priority, detection)
+
+    def _publish_classification(self, obstacle: Dict[str, Any], detection: Dict[str, Any]):
+        """Publish obstacle classification event for dashboard."""
+        classification = obstacle.get('classification', {})
+
+        msg = String()
+        msg.data = json.dumps({
+            'timestamp': time.time(),
+            'obstacle': {
+                'x': obstacle.get('x'),
+                'y': obstacle.get('y'),
+                'distance': obstacle.get('distance', 0),
+                'severity': obstacle.get('severity', 'unknown')
+            },
+            'classification': {
+                'type': classification.get('obstacle_type', 'unknown'),
+                'priority_weight': classification.get('priority_weight', 1.0),
+                'confidence': classification.get('confidence', 0.0),
+                'reasoning': classification.get('reasoning', ''),
+                'zone_name': classification.get('zone_name'),
+                'velocity': classification.get('estimated_velocity'),
+                'size': classification.get('estimated_size')
+            },
+            'detection_summary': {
+                'total_count': detection.get('total_count', 0),
+                'critical_count': detection.get('critical_count', 0),
+                'classification_enabled': detection.get('classification_enabled', False)
+            }
+        })
+        self.classification_pub.publish(msg)
 
     # === Decision Handling ===
 

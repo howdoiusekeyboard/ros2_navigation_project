@@ -144,17 +144,18 @@ class PathSelectionExplainer:
 class ObstacleAvoidanceExplainer:
     """
     Specialized explainer for obstacle avoidance decisions.
-    
+
     Adds context about:
     - Obstacle characteristics (size, distance, type)
     - Avoidance strategy (stop, go around, back up)
     - Safety considerations
+    - Weighted classification (Week 4+)
     """
-    
+
     def __init__(self):
         """Initialize obstacle explainer."""
         pass
-    
+
     def add_context(
         self,
         decision_data: Dict[str, Any],
@@ -163,27 +164,45 @@ class ObstacleAvoidanceExplainer:
         """Add obstacle-specific context."""
         obstacle_info = self._analyze_obstacle(decision_data)
         avoidance_strategy = self._determine_strategy(decision_data, obstacle_info)
-        
+
+        # NEW: Add weighted classification context
+        classification_context = self._analyze_classification(decision_data)
+
         enhanced_context = {
             **base_context,
             'obstacle': obstacle_info,
             'strategy': avoidance_strategy,
-            'safety_priority': True
+            'safety_priority': True,
+            'classification': classification_context
         }
-        
+
         return enhanced_context
-    
+
     def _analyze_obstacle(self, decision_data: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze obstacle characteristics."""
         distance = decision_data.get('distance_to_robot', 999.0)
         severity = decision_data.get('severity', 'unknown')
-        
+
         return {
             'distance': distance,
             'severity': severity,
             'is_critical': distance < 0.3,
             'location': self._describe_location(decision_data),
-            'is_moving': decision_data.get('is_moving', False)
+            'is_moving': decision_data.get('is_moving', False),
+            # NEW: Classification fields
+            'type': decision_data.get('obstacle_type', 'unknown'),
+            'priority_weight': decision_data.get('priority_weight', 1.0)
+        }
+
+    def _analyze_classification(self, decision_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze weighted classification data."""
+        return {
+            'obstacle_type': decision_data.get('obstacle_type', 'unknown'),
+            'priority_weight': decision_data.get('priority_weight', 1.0),
+            'confidence': decision_data.get('classification_confidence', 0.0),
+            'reasoning': decision_data.get('classification_reasoning', ''),
+            'zone_name': decision_data.get('zone_name'),
+            'is_high_priority': decision_data.get('priority_weight', 1.0) >= 5.0
         }
     
     def _describe_location(self, decision_data: Dict[str, Any]) -> str:
@@ -224,11 +243,25 @@ class ObstacleAvoidanceExplainer:
         explanation: str,
         decision_data: Dict[str, Any]
     ) -> str:
-        """Post-process obstacle explanation."""
+        """Post-process obstacle explanation with priority-based enhancements."""
         # Ensure safety reassurance if stopped
         if 'stop' in explanation.lower() and 'safe' not in explanation.lower():
             explanation += " I'll continue when it's safe."
-        
+
+        # NEW: Add priority-based enhancements
+        obstacle_type = decision_data.get('obstacle_type', 'unknown')
+        priority_weight = decision_data.get('priority_weight', 1.0)
+
+        # Add priority explanation if high priority and not mentioned
+        if priority_weight >= 5.0 and 'priority' not in explanation.lower():
+            if obstacle_type == 'human':
+                if 'person' not in explanation.lower() and 'human' not in explanation.lower():
+                    explanation = explanation.rstrip('. ')
+                    explanation += ". I'm treating this as a person for maximum safety."
+            elif obstacle_type == 'vehicle':
+                explanation = explanation.rstrip('. ')
+                explanation += " Extra caution due to potential movement."
+
         return explanation
 
 
