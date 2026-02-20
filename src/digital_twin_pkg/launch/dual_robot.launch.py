@@ -42,6 +42,8 @@ def generate_launch_description():
 
     # URDF model path - use TURTLEBOT3_MODEL env var (default: waffle_pi)
     turtlebot3_model = os.environ.get('TURTLEBOT3_MODEL', 'waffle_pi')
+    # Prevent path traversal injection
+    turtlebot3_model = os.path.basename(turtlebot3_model)
     urdf_file = os.path.join(
         pkg_turtlebot3_gazebo,
         'urdf',

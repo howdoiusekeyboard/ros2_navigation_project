@@ -303,10 +303,10 @@ class ContextBuilder:
             (x, y) tuple or None if no coordinates found
         """
         # Pattern 1: "2, 3" or "2.5, 3.1"
-        coord_pattern_1 = r'(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)'
+        coord_pattern_1 = r'(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)'
 
         # Pattern 2: "x=2 y=3" or "x:2 y:3"
-        coord_pattern_2 = r'x\s*[=:]\s*(-?\d+\.?\d*)\s+y\s*[=:]\s*(-?\d+\.?\d*)'
+        coord_pattern_2 = r'x\s*[=:]\s*(-?\d+(?:\.\d+)?)\s+y\s*[=:]\s*(-?\d+(?:\.\d+)?)'
 
         # Try pattern 1
         match = re.search(coord_pattern_1, text)

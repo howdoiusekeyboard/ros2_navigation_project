@@ -42,7 +42,11 @@ class ConversationDatabase:
             db_path: Path to SQLite database file (relative to backend root)
         """
         # Resolve path relative to backend directory
-        self.db_path = Path(__file__).parent.parent.parent / db_path
+        base_path = Path(__file__).parent.parent.parent.resolve()
+        resolved_path = (base_path / db_path).resolve()
+        if not str(resolved_path).startswith(str(base_path)):
+            raise ValueError("Invalid database path for conversation history: Path traversal detected")
+        self.db_path = resolved_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         self._connection: Optional[aiosqlite.Connection] = None
@@ -51,7 +55,8 @@ class ConversationDatabase:
         # In-memory cache for spatial references (per session)
         self._spatial_cache: Dict[str, Dict[str, Tuple[float, float, str]]] = {}
 
-        logger.info(f"ConversationDatabase initialized at: {self.db_path}")
+        safe_path = str(self.db_path).replace('\r', '').replace('\n', '')
+        logger.info(f"ConversationDatabase initialized at: {safe_path}")
 
     async def connect(self):
         """Establish database connection and initialize schema."""
@@ -204,9 +209,11 @@ class ConversationDatabase:
                 session_id, location_label, location_x, location_y, location_label
             )
 
+        safe_session = str(session_id).replace('\r', '').replace('\n', '')
+        safe_input = str(user_input[:50]).replace('\r', '').replace('\n', '')
         logger.debug(
-            f"Stored turn {turn_number} for session {session_id}: "
-            f"\"{user_input[:50]}...\" (ID: {turn_id})"
+            f"Stored turn {turn_number} for session {safe_session}: "
+            f"\"{safe_input}...\" (ID: {turn_id})"
         )
 
         return turn_id
@@ -423,7 +430,8 @@ class ConversationDatabase:
             del self._spatial_cache[session_id]
 
         deleted_count = cursor.rowcount
-        logger.info(f"Soft deleted {deleted_count} turns from session {session_id}")
+        safe_session = str(session_id).replace('\r', '').replace('\n', '')
+        logger.info(f"Soft deleted {deleted_count} turns from session {safe_session}")
 
         return deleted_count > 0
 

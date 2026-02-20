@@ -32,6 +32,10 @@ class SystemEvaluator:
     """Evaluates the intelligent navigation system for research metrics."""
 
     def __init__(self, backend_url: str, verbose: bool = False):
+        import urllib.parse
+        parsed = urllib.parse.urlparse(backend_url)
+        if parsed.scheme not in ('http', 'https'):
+            raise ValueError("Backend URL must use http or https scheme")
         self.backend_url = backend_url.rstrip("/")
         self.verbose = verbose
         self.results: Dict[str, Any] = {
@@ -237,8 +241,9 @@ def main():
     evaluator = SystemEvaluator(args.backend_url, verbose=args.verbose)
     results = evaluator.run_evaluation()
 
-    # Save results
-    with open(args.output, "w") as f:
+    # Sanitize output path against path injection
+    safe_output_path = Path.cwd() / args.output.name
+    with open(safe_output_path, "w") as f:
         json.dump(results, f, indent=2, default=str)
 
     print(f"\n{'='*60}")

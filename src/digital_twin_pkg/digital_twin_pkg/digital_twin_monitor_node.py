@@ -152,10 +152,17 @@ class DigitalTwinMonitorNode(Node):
     def _try_load_model(self) -> None:
         """Load persisted IsolationForest model from disk if available."""
         try:
-            if not os.path.exists(self.model_path):
+            # Prevent path traversal and arbitrary file load
+            safe_base = os.path.abspath(os.path.expanduser('~/.ros/digital_twin'))
+            resolved_path = os.path.abspath(self.model_path)
+            if not resolved_path.startswith(safe_base):
+                self.get_logger().error("Invalid model path: Path traversal detected")
                 return
 
-            with open(self.model_path, "rb") as f:
+            if not os.path.exists(resolved_path):
+                return
+
+            with open(resolved_path, "rb") as f:
                 payload = pickle.load(f)
 
             # Accept either raw model or payload dict
