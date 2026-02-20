@@ -100,6 +100,7 @@ class YoloClassSetter(Node):
         # Timer to retry service call until successful
         self.timer = self.create_timer(2.0, self.try_set_classes)
         self.classes_set = False
+        self.in_flight = False
         self.retry_count = 0
         self.max_retries = 30  # Give up after 60 seconds
 
@@ -108,7 +109,7 @@ class YoloClassSetter(Node):
 
     def try_set_classes(self):
         """Attempt to set YOLO-World classes via service call."""
-        if self.classes_set:
+        if self.classes_set or self.in_flight:
             return
 
         self.retry_count += 1
@@ -132,12 +133,14 @@ class YoloClassSetter(Node):
         request = SetClasses.Request()
         request.classes = self.classes
 
+        self.in_flight = True
         self.get_logger().info(f'Calling set_classes with {len(self.classes)} classes...')
         future = self.client.call_async(request)
         future.add_done_callback(self.classes_callback)
 
     def classes_callback(self, future):
         """Handle service response."""
+        self.in_flight = False
         try:
             future.result()  # SetClasses has empty response
 

@@ -315,22 +315,16 @@ class ContextBuilder:
         # Try pattern 1
         match = re.search(coord_pattern_1, text)
         if match:
-            try:
-                x = float(match.group(1))
-                y = float(match.group(2))
-                return (x, y)
-            except ValueError:
-                pass
+            x = float(match.group(1))
+            y = float(match.group(2))
+            return (x, y)
 
         # Try pattern 2
         match = re.search(coord_pattern_2, text.lower())
         if match:
-            try:
-                x = float(match.group(1))
-                y = float(match.group(2))
-                return (x, y)
-            except ValueError:
-                pass
+            x = float(match.group(1))
+            y = float(match.group(2))
+            return (x, y)
 
         return None
 

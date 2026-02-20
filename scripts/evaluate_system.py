@@ -36,6 +36,11 @@ class SystemEvaluator:
         parsed = urllib.parse.urlparse(backend_url)
         if parsed.scheme not in ('http', 'https'):
             raise ValueError("Backend URL must use http or https scheme")
+            
+        # Strict SSRF mitigation for testing script
+        if parsed.hostname not in ('localhost', '127.0.0.1'):
+             raise ValueError(f"Strict SSRF protection: Hostname '{parsed.hostname}' is not permitted. Only localhost is allowed for evaluation.")
+             
         self.backend_url = backend_url.rstrip("/")
         self.verbose = verbose
         self.results: Dict[str, Any] = {

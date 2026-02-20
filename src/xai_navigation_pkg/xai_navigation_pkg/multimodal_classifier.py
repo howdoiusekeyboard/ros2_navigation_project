@@ -577,8 +577,8 @@ class MultiModalClassifier:
         return velocity, vx, vy
 
     def _get_obstacle_id(self, x: float, y: float) -> str:
-        """Generate unique ID for obstacle based on position."""
-        return f"obs_{int(x*10)}_{int(y*10)}"
+        """Generate unique ID for obstacle based on position matching costmap resolution (0.05m)."""
+        return f"obs_{int(x*20)}_{int(y*20)}"
 
     def _cleanup_history(self, current_time: float, max_age: float = 3.0):
         """Remove old position history entries."""

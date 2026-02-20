@@ -23,18 +23,18 @@ def render_diagram(mmd_file: Path, output_file: Path):
     # Read Mermaid code
     with open(mmd_file, 'r', encoding='utf-8') as f:
         mermaid_code = f.read()
+        
+    # Strictly validate Mermaid content instead of URL prefix to ensure only diagrams are processed
+    valid_keywords = ('graph', 'sequenceDiagram', 'classDiagram', 'stateDiagram', 'pie', 'gantt')
+    if not any(mermaid_code.strip().startswith(kw) for kw in valid_keywords):
+        print(f"✗ Invalid Mermaid content in {mmd_file.name}: Missing diagram keyword")
+        return False
     
-    # Encode for API
-    import urllib.parse
-    encoded = urllib.parse.quote(encode_mermaid(mermaid_code))
+    # Encode for API (urllib.parse.quote is unnecessary for base64url)
+    encoded = encode_mermaid(mermaid_code)
     
     # Try mermaid.ink API
     api_url = f"https://mermaid.ink/img/{encoded}"
-    
-    # Strict SSRF validation
-    if not api_url.startswith("https://mermaid.ink/img/"):
-        print(f"✗ Invalid API URL generated for {mmd_file.name}")
-        return False
     
     try:
         response = requests.get(api_url, timeout=30)

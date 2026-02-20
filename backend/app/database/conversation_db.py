@@ -51,8 +51,10 @@ class ConversationDatabase:
             
         resolved_path = (base_path / 'data' / sanitized_filename).resolve()
         
-        if not str(resolved_path).startswith(str(base_path / 'data')):
-            raise ValueError("Invalid database path for conversation history: Path traversal detected")
+        # Robust path traversal immunity using pathlib checks rather than string prefixes
+        if not resolved_path.is_relative_to(base_path / 'data'):
+             raise ValueError("Invalid database path for conversation history: Path traversal detected")
+             
         self.db_path = resolved_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -63,7 +65,7 @@ class ConversationDatabase:
         self._spatial_cache: Dict[str, Dict[str, Tuple[float, float, str]]] = {}
 
         safe_path = repr(str(self.db_path))
-        logger.info(f"ConversationDatabase initialized at: {safe_path}")
+        logger.info("ConversationDatabase initialized at: %s", safe_path)
 
     async def connect(self):
         """Establish database connection and initialize schema."""

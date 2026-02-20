@@ -152,11 +152,13 @@ class DigitalTwinMonitorNode(Node):
     def _try_load_model(self) -> None:
         """Load persisted IsolationForest model from disk if available."""
         try:
-            # Prevent path traversal and arbitrary file load
+            from pathlib import Path
             safe_base = os.path.abspath(os.path.expanduser('~/.ros/digital_twin'))
             resolved_path = os.path.abspath(self.model_path)
-            if not resolved_path.startswith(safe_base):
-                self.get_logger().error("Invalid model path: Path traversal detected")
+            
+            # Use strict path containment validation
+            if not Path(resolved_path).is_relative_to(Path(safe_base)):
+                self.get_logger().error("Invalid model path: refusing to read outside safe directory")
                 return
 
             if not os.path.exists(resolved_path):
@@ -165,9 +167,15 @@ class DigitalTwinMonitorNode(Node):
             class SafeUnpickler(pickle.Unpickler):
                 def find_class(self, module, name):
                     # Strict whitelist of allowed modules for scikit-learn models
-                    allowed_modules = ('sklearn', 'numpy', 'builtins', '_codecs')
+                    allowed_builtins = {'tuple', 'list', 'dict', 'set', 'frozenset', 'int', 'float', 'str', 'bytes', 'bool'}
+                    
+                    if module == 'builtins' and name in allowed_builtins:
+                        return super().find_class(module, name)
+                    
+                    allowed_modules = ('sklearn', 'numpy', '_codecs')
                     if any(module == m or module.startswith(m + '.') for m in allowed_modules):
                         return super().find_class(module, name)
+                        
                     raise pickle.UnpicklingError(f"Unsafe deserialization blocked: '{module}.{name}' is forbidden")
 
             with open(resolved_path, "rb") as f:
@@ -190,13 +198,22 @@ class DigitalTwinMonitorNode(Node):
     def _persist_model(self) -> None:
         """Persist trained model to disk."""
         try:
-            os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
-            with open(self.model_path, "wb") as f:
+            from pathlib import Path
+            safe_base = os.path.abspath(os.path.expanduser('~/.ros/digital_twin'))
+            resolved_path = os.path.abspath(self.model_path)
+            
+            # Apply symmetric path containment validation
+            if not Path(resolved_path).is_relative_to(Path(safe_base)):
+                self.get_logger().error("Invalid model path: refusing to write outside safe directory")
+                return
+                
+            os.makedirs(os.path.dirname(resolved_path), exist_ok=True)
+            with open(resolved_path, "wb") as f:
                 pickle.dump(
                     {"model": self.anomaly_model, "feature_names": self._feature_names, "created_at": time.time()},
                     f,
                 )
-            self.get_logger().info(f"Saved anomaly model to {self.model_path}")
+            self.get_logger().info(f"Saved anomaly model to {resolved_path}")
         except Exception as e:
             self.get_logger().error(f"Failed to save anomaly model: {e}")
 

@@ -29,6 +29,8 @@ source install/setup.bash
 export TURTLEBOT3_MODEL=waffle_pi
 
 SESSION="xai_working"
+SETUP_CMD="cd ~/ros2_navigation_project && source /opt/ros/humble/setup.bash && source install/setup.bash"
+TB3_SETUP="$SETUP_CMD && export TURTLEBOT3_MODEL=waffle_pi"
 
 echo "🚀 Launching fixed system..."
 
@@ -36,48 +38,48 @@ tmux new-session -d -s $SESSION -n 'Gazebo'
 
 # Window 0: Gazebo
 echo "[1/6] Gazebo with custom world..."
-tmux send-keys -t $SESSION:0 "cd ~/ros2_navigation_project && source /opt/ros/humble/setup.bash && source install/setup.bash && export TURTLEBOT3_MODEL=waffle_pi" C-m
+tmux send-keys -t $SESSION:0 "$TB3_SETUP" C-m
 tmux send-keys -t $SESSION:0 "ros2 launch xai_navigation_pkg weighted_xai_world.launch.py" C-m
 
 # Window 1: RViz2
 echo "[2/6] RViz2..."
 tmux new-window -t $SESSION -n 'RViz'
 tmux send-keys -t $SESSION:1 "sleep 15" C-m
-tmux send-keys -t $SESSION:1 "cd ~/ros2_navigation_project && source /opt/ros/humble/setup.bash && source install/setup.bash && export TURTLEBOT3_MODEL=waffle_pi" C-m
+tmux send-keys -t $SESSION:1 "$TB3_SETUP" C-m
 tmux send-keys -t $SESSION:1 "rviz2 -d \$(ros2 pkg prefix nav2_bringup)/share/nav2_bringup/rviz/nav2_default_view.rviz" C-m
 
 # Window 2: Localization (LARGER MAP!)
 echo "[3/6] Localization with larger map..."
 tmux new-window -t $SESSION -n 'Localization'
 tmux send-keys -t $SESSION:2 "sleep 20" C-m
-tmux send-keys -t $SESSION:2 "cd ~/ros2_navigation_project && source /opt/ros/humble/setup.bash && source install/setup.bash && export TURTLEBOT3_MODEL=waffle_pi" C-m
+tmux send-keys -t $SESSION:2 "$TB3_SETUP" C-m
 tmux send-keys -t $SESSION:2 "ros2 launch localization_server localization.launch.py" C-m
 
 # Window 3: Path Planner
 echo "[4/6] Path planner..."
 tmux new-window -t $SESSION -n 'Planner'
 tmux send-keys -t $SESSION:3 "sleep 30" C-m
-tmux send-keys -t $SESSION:3 "cd ~/ros2_navigation_project && source /opt/ros/humble/setup.bash && source install/setup.bash" C-m
+tmux send-keys -t $SESSION:3 "$SETUP_CMD" C-m
 tmux send-keys -t $SESSION:3 "ros2 launch path_planner_server pathplanner.launch.py" C-m
 
 # Window 4: XAI Navigator
 echo "[5/6] XAI Navigator..."
 tmux new-window -t $SESSION -n 'XAI'
 tmux send-keys -t $SESSION:4 "sleep 40" C-m
-tmux send-keys -t $SESSION:4 "cd ~/ros2_navigation_project && source /opt/ros/humble/setup.bash && source install/setup.bash" C-m
-tmux send-keys -t $SESSION:4 "if [ -f backend/.env ]; then export \$(grep -v '^#' backend/.env | xargs); fi" C-m
+tmux send-keys -t $SESSION:4 "$SETUP_CMD" C-m
+tmux send-keys -t $SESSION:4 "if [ -f backend/.env ]; then set -o allexport; source backend/.env; set +o allexport; fi; if [ -z \"\$GEMINI_API_KEY\" ]; then echo 'ERROR: GEMINI_API_KEY is empty'; exit 1; fi" C-m
 tmux send-keys -t $SESSION:4 "ros2 launch xai_navigation_pkg xai_navigator.launch.py enable_explanations:=true enable_obstacle_weighting:=true gemini_api_key:=\$GEMINI_API_KEY" C-m
 
 # Window 5: YOLO (CPU MODE - GPU incompatible, fallback to CPU)
 echo "[6/6] YOLO perception (CPU mode - GPU has CUDA compatibility issue)..."
 tmux new-window -t $SESSION -n 'YOLO'
 tmux send-keys -t $SESSION:5 "sleep 50" C-m
-tmux send-keys -t $SESSION:5 "cd ~/ros2_navigation_project && source /opt/ros/humble/setup.bash && source install/setup.bash" C-m
+tmux send-keys -t $SESSION:5 "$SETUP_CMD" C-m
 tmux send-keys -t $SESSION:5 "ros2 launch xai_navigation_pkg yolo_perception.launch.py device:=cpu threshold:=0.35 input_image_topic:=/camera/image_raw" C-m
 
 # Window 6: Test Commands
 tmux new-window -t $SESSION -n 'Commands'
-tmux send-keys -t $SESSION:6 "cd ~/ros2_navigation_project && source /opt/ros/humble/setup.bash && source install/setup.bash" C-m
+tmux send-keys -t $SESSION:6 "$SETUP_CMD" C-m
 tmux send-keys -t $SESSION:6 "sleep 60 && clear" C-m
 tmux send-keys -t $SESSION:6 "cat << 'EOF'
 

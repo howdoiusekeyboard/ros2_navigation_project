@@ -154,6 +154,39 @@ class DecisionDatabase:
         ''')
 
         self.conn.commit()
+        
+        # Run schema migrations in case db predates new columns
+        self._migrate_schema()
+
+    def _migrate_schema(self):
+        """Migrate existing tables to include new columns."""
+        cursor = self.conn.cursor()
+        
+        # Determine existing columns in obstacle_events
+        cursor.execute('PRAGMA table_info(obstacle_events)')
+        columns = [row[1] for row in cursor.fetchall()]
+        
+        # Define expected new columns and their types
+        new_columns = {
+            'obstacle_type': 'TEXT',
+            'priority_weight': 'REAL',
+            'classification_confidence': 'REAL',
+            'classification_reasoning': 'TEXT',
+            'zone_name': 'TEXT',
+            'estimated_velocity': 'REAL',
+            'estimated_size': 'REAL'
+        }
+        
+        # Add any missing columns
+        for col, col_type in new_columns.items():
+            if col not in columns:
+                try:
+                    cursor.execute(f'ALTER TABLE obstacle_events ADD COLUMN {col} {col_type}')
+                except sqlite3.OperationalError as e:
+                    # Ignore duplicate column errors if they randomly occur
+                    pass
+                    
+        self.conn.commit()
 
     def log_decision(
         self,
