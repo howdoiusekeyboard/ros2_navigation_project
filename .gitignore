@@ -28,6 +28,12 @@ Thumbs.db
 node_modules/
 .venv/
 
+# Environment Variables (Strict Exclusion)
+.env
+.env.*
+!.env.example
+backend/.env
+project/.env
 # Python virtual environments (catch all variations)
 venv/
 **/venv/

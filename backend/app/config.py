@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     # API Keys
     openai_api_key: str = Field(..., env="OPENAI_API_KEY")
     gemini_api_key: str = Field(..., env="GEMINI_API_KEY")
+    
+    # Speech-to-text (OpenAI)
+    # Recommended models (2025): gpt-4o-transcribe, gpt-4o-mini-transcribe
+    # Fallback/legacy: whisper-1
+    openai_stt_model: str = Field("gpt-4o-mini-transcribe", env="OPENAI_STT_MODEL")
 
     # Database
     database_url: str = Field(

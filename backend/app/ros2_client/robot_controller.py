@@ -8,6 +8,7 @@ Publishes Twist messages for velocity control.
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy
+from rclpy.executors import MultiThreadedExecutor
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
@@ -15,6 +16,7 @@ import threading
 from loguru import logger
 from typing import Optional, Callable
 import time
+from app.ros2_client.nav2_client import Nav2Client
 
 
 class RobotController(Node):
@@ -213,6 +215,8 @@ class ROS2Manager:
 
     def __init__(self):
         self.robot_controller: Optional[RobotController] = None
+        self.nav2_client: Optional[Nav2Client] = None
+        self._executor: Optional[MultiThreadedExecutor] = None
         self.spin_thread: Optional[threading.Thread] = None
         self.running = False
 
@@ -225,6 +229,15 @@ class ROS2Manager:
 
             # Create robot controller node
             self.robot_controller = RobotController()
+            
+            # Create Nav2 action client node (for NavigateToPose)
+            # Safe even if Nav2 is not running; server availability is checked at call time.
+            self.nav2_client = Nav2Client()
+            
+            # Multi-node executor so action futures progress correctly
+            self._executor = MultiThreadedExecutor(num_threads=2)
+            self._executor.add_node(self.robot_controller)
+            self._executor.add_node(self.nav2_client)
 
             # Start spinning in background thread
             self.running = True
@@ -242,7 +255,11 @@ class ROS2Manager:
         logger.info('ROS2 spin loop started')
         while self.running and rclpy.ok():
             try:
-                rclpy.spin_once(self.robot_controller, timeout_sec=0.1)
+                if self._executor is not None:
+                    self._executor.spin_once(timeout_sec=0.1)
+                else:
+                    # Fallback (should not happen): spin robot controller only
+                    rclpy.spin_once(self.robot_controller, timeout_sec=0.1)
             except Exception as e:
                 logger.error(f'ROS2 spin error: {e}')
                 if not self.running:
@@ -257,6 +274,18 @@ class ROS2Manager:
         if self.spin_thread:
             self.spin_thread.join(timeout=2.0)
 
+        if self._executor:
+            try:
+                if self.nav2_client:
+                    self._executor.remove_node(self.nav2_client)
+                if self.robot_controller:
+                    self._executor.remove_node(self.robot_controller)
+            except Exception:
+                pass
+
+        if self.nav2_client:
+            self.nav2_client.destroy_node()
+
         if self.robot_controller:
             self.robot_controller.destroy_node()
 
@@ -270,6 +299,12 @@ class ROS2Manager:
         if not self.robot_controller:
             raise RuntimeError('ROS2 Manager not initialized')
         return self.robot_controller
+    
+    def get_nav2_client(self) -> Nav2Client:
+        """Get Nav2 client instance (NavigateToPose)."""
+        if not self.nav2_client:
+            raise RuntimeError('ROS2 Manager not initialized')
+        return self.nav2_client
 
 
 # Global singleton instance

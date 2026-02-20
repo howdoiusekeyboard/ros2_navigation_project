@@ -82,7 +82,7 @@ Transformed a 20%-complete academic project into a **fully functional voice-cont
 - `unknown`: Unrecognized command
 
 #### 3. speechService.ts (200 lines)
-**Purpose:** Browser-based voice input using Web Speech API
+**Purpose:** Browser-based voice input using MediaRecorder + backend OpenAI Speech-to-Text (no Web Speech API)
 
 **Features:**
 - Real-time speech recognition (Chrome/Edge only)
@@ -167,9 +167,9 @@ Transformed a 20%-complete academic project into a **fully functional voice-cont
 └───────────────┬─────────────────────────────────────────┘
                 ▼
 ┌───────────────────────────────────────────────────────┐
-│ Web Speech API (speechService.ts)                     │
-│ - Captures audio from microphone                      │
-│ - Converts speech to text                             │
+│ MediaRecorder + Backend STT (speechService.ts)        │
+│ - Captures microphone audio                           │
+│ - Backend transcribes with OpenAI Speech-to-Text       │
 │ - Returns: {transcript: "spin in a circle", ...}      │
 └───────────────┬───────────────────────────────────────┘
                 ▼
@@ -227,10 +227,9 @@ Transformed a 20%-complete academic project into a **fully functional voice-cont
 - **Why:** Reliability > sophistication. System works even when API is down.
 
 **4. Browser-Based Speech Recognition**
-- Web Speech API (free, no server needed)
-- **Trade-off:** Chrome/Edge only, ~85-90% accuracy
-- **Alternative considered:** Whisper API (more accurate but costs $0.006/minute)
-- **Decision:** Web Speech API is sufficient for proof-of-concept
+- MediaRecorder capture in browser + OpenAI Speech-to-Text on backend (consistent across browsers)
+- **Trade-off:** Requires backend + OpenAI API key
+- **Decision:** Use OpenAI STT end-to-end (research-ready, production-grade)
 
 **5. No Backend Server (Initially)**
 - rosbridge provides ROS ↔ WebSocket bridge
@@ -266,7 +265,7 @@ Transformed a 20%-complete academic project into a **fully functional voice-cont
 ✅ All dependencies installed
 ✅ ROS integration (3-service architecture)
 ✅ Gemini 2.0 Flash integration
-✅ Web Speech API integration
+✅ OpenAI Speech-to-Text integration (backend)
 ✅ Emergency stop functionality
 ✅ Error handling & graceful degradation
 ✅ Development & production builds
@@ -374,7 +373,7 @@ Based on architecture:
 
 | Stage | Time | Cumulative |
 |-------|------|------------|
-| Voice input (Web Speech API) | 150-300ms | 300ms |
+| Voice input (MediaRecorder + backend STT) | 300-1500ms | 1500ms |
 | Gemini 2.0 Flash API | 300-500ms | 800ms |
 | ROS publish | 10-50ms | 850ms |
 | Robot execution | 0ms (start) | **850ms total** |
@@ -432,7 +431,7 @@ project/package.json                  ✅ Added dependencies:
 2. **Singleton services** - Single WebSocket connection prevents chaos
 3. **Observer pattern** - Clean separation between services and UI
 4. **Bun instead of npm** - 10x faster installs, native TypeScript support
-5. **Web Speech API first** - Free, fast, good enough for proof-of-concept
+5. **MediaRecorder + OpenAI STT** - Consistent speech-to-text across environments
 
 ### What Would Be Different in Production
 

@@ -7,8 +7,10 @@
  * - Laser scan deviations
  * - Anomaly score and alerts
  *
- * Week 1: Mocked comparison data for UI skeleton
- * Week 4-5: Will integrate with digital_twin_monitor_node via rosbridge
+ * Live data via rosbridge:
+ * - /twin/sensor_diff (std_msgs/String JSON)
+ * - /anomaly/score (std_msgs/Float32)
+ * - /anomaly/alert (std_msgs/String JSON)
  */
 
 import React, { useState, useEffect } from 'react';
@@ -20,6 +22,7 @@ import {
   XCircle,
   Activity,
 } from 'lucide-react';
+import { rosService, type TwinSensorDiff, type AnomalyAlert } from '../services/rosService';
 
 interface SensorComparison {
   positionDiffX: number;
@@ -41,57 +44,73 @@ interface AnomalyStatus {
   recommendedAction: string;
 }
 
-// Mocked data for Week 1 UI development
-const mockSensorComparison: SensorComparison = {
-  positionDiffX: 0.023,
-  positionDiffY: 0.015,
-  positionDiffTotal: 0.027,
-  orientationDiff: 0.012,
-  linearVelDiff: 0.008,
-  angularVelDiff: 0.005,
-  scanDiffMean: 0.045,
-  scanDiffMax: 0.182,
-  scanDiffVariance: 0.0012,
+const defaultSensorComparison: SensorComparison = {
+  positionDiffX: 0,
+  positionDiffY: 0,
+  positionDiffTotal: 0,
+  orientationDiff: 0,
+  linearVelDiff: 0,
+  angularVelDiff: 0,
+  scanDiffMean: 0,
+  scanDiffMax: 0,
+  scanDiffVariance: 0,
 };
 
-const mockAnomalyStatus: AnomalyStatus = {
-  score: 0.35,
+const defaultAnomalyStatus: AnomalyStatus = {
+  score: 0,
   isAnomaly: false,
   severity: 0,
-  explanation: 'All sensors within normal operating parameters',
+  explanation: 'Waiting for digital twin telemetry...',
   recommendedAction: 'Continue monitoring',
 };
 
 export const TwinComparisonPanel: React.FC = () => {
-  const [comparison, setComparison] = useState<SensorComparison>(mockSensorComparison);
-  const [anomalyStatus, setAnomalyStatus] = useState<AnomalyStatus>(mockAnomalyStatus);
+  const [comparison, setComparison] = useState<SensorComparison>(defaultSensorComparison);
+  const [anomalyStatus, setAnomalyStatus] = useState<AnomalyStatus>(defaultAnomalyStatus);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
 
-  // Simulate real-time updates
+  // Subscribe to ROS topics
   useEffect(() => {
-    const interval = setInterval(() => {
-      // Week 4-5: Will subscribe to /twin/sensor_diff and /anomaly/score topics
+    rosService.onTwinSensorDiff((diff: TwinSensorDiff) => {
       setLastUpdateTime(new Date());
+      setComparison({
+        positionDiffX: diff.position_diff_x ?? 0,
+        positionDiffY: diff.position_diff_y ?? 0,
+        positionDiffTotal: diff.position_diff_total ?? 0,
+        orientationDiff: diff.orientation_diff ?? 0,
+        linearVelDiff: diff.linear_vel_diff ?? 0,
+        angularVelDiff: diff.angular_vel_diff ?? 0,
+        scanDiffMean: diff.scan_diff_mean ?? 0,
+        scanDiffMax: diff.scan_diff_max ?? 0,
+        scanDiffVariance: diff.scan_diff_variance ?? 0,
+      });
+    });
 
-      // Simulate small fluctuations
-      setComparison((prev) => ({
+    rosService.onAnomalyScore((score: number) => {
+      setLastUpdateTime(new Date());
+      setAnomalyStatus((prev) => ({
         ...prev,
-        positionDiffX: prev.positionDiffX + (Math.random() - 0.5) * 0.01,
-        positionDiffY: prev.positionDiffY + (Math.random() - 0.5) * 0.01,
-        positionDiffTotal: Math.sqrt(
-          Math.pow(prev.positionDiffX, 2) + Math.pow(prev.positionDiffY, 2)
-        ),
-        linearVelDiff: Math.abs(prev.linearVelDiff + (Math.random() - 0.5) * 0.005),
+        score,
+        // If no explicit alert received, treat as normal
+        isAnomaly: prev.isAnomaly,
       }));
-    }, 2000);
+    });
 
-    return () => clearInterval(interval);
+    rosService.onAnomalyAlert((alert: AnomalyAlert) => {
+      setLastUpdateTime(new Date());
+      setAnomalyStatus({
+        score: alert.score,
+        isAnomaly: alert.is_anomaly,
+        severity: (alert.severity ?? 1) as 0 | 1 | 2,
+        explanation: alert.explanation || 'Anomaly detected',
+        recommendedAction: alert.recommended_action || 'Investigate',
+      });
+    });
   }, []);
 
   const refreshData = () => {
     setIsLoading(true);
-    // Week 4-5: Will fetch latest data from ROS2 topics via rosbridge
     setTimeout(() => {
       setIsLoading(false);
       setLastUpdateTime(new Date());
@@ -264,7 +283,7 @@ export const TwinComparisonPanel: React.FC = () => {
       </div>
 
       <div className="mt-2 text-xs text-gray-500 text-center">
-        Week 1: Mocked data | Week 4-5: Live twin monitoring
+        Live digital twin telemetry via rosbridge
       </div>
     </div>
   );

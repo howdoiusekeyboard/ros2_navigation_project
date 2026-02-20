@@ -9,10 +9,11 @@ import { ArchitectureDiagram } from '../components/ArchitectureDiagram';
 import { SystemPrompt } from '../components/SystemPrompt';
 import { ExplanationPanel } from '../components/ExplanationPanel';
 import { DecisionTimeline } from '../components/DecisionTimeline';
-import { Layers, Terminal, MessageSquare, Brain } from 'lucide-react';
+import { TwinComparisonPanel } from '../components/TwinComparisonPanel';
+import { Layers, Terminal, MessageSquare, Brain, GitCompare } from 'lucide-react';
 
 export const RobotDashboard: React.FC = () => {
-  const [activePanel, setActivePanel] = useState<'default' | 'architecture' | 'prompt' | 'xai'>('default');
+  const [activePanel, setActivePanel] = useState<'default' | 'architecture' | 'prompt' | 'xai' | 'twin'>('default');
 
   const renderPanel = () => {
     switch (activePanel) {
@@ -25,6 +26,16 @@ export const RobotDashboard: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
             <ExplanationPanel />
             <DecisionTimeline />
+          </div>
+        );
+      case 'twin':
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <TwinComparisonPanel />
+            <div className="space-y-4">
+              <RobotStatus />
+              <SystemStatus />
+            </div>
           </div>
         );
       default:
@@ -72,6 +83,16 @@ export const RobotDashboard: React.FC = () => {
           >
             <Brain className="h-4 w-4" />
             <span>XAI Brain</span>
+          </button>
+          <button
+            onClick={() => setActivePanel('twin')}
+            className={`px-4 py-2 rounded-md flex items-center gap-2 ${activePanel === 'twin'
+                ? 'bg-purple-600 text-white'
+                : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
+              }`}
+          >
+            <GitCompare className="h-4 w-4" />
+            <span>Digital Twin</span>
           </button>
           <button
             onClick={() => setActivePanel('architecture')}

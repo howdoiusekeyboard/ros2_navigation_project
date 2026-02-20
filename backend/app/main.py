@@ -130,7 +130,7 @@ async def transcribe_audio(audio: UploadFile = File(...)):
         }
     """
     try:
-        logger.info(f"Received audio file: {audio.filename}, size: {audio.size} bytes")
+        logger.info(f"Received audio file: {audio.filename}, size: {getattr(audio, 'size', 'unknown')} bytes")
 
         # Import OpenAI client
         from openai import OpenAI
@@ -139,30 +139,68 @@ async def transcribe_audio(audio: UploadFile = File(...)):
         # Read audio file
         audio_data = await audio.read()
 
-        # Save temporarily (Whisper API requires file path or file object)
+        # Save temporarily (OpenAI audio API requires file path or file object)
         import tempfile
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
+        import os
+        original_suffix = ""
+        try:
+            if audio.filename and "." in audio.filename:
+                original_suffix = os.path.splitext(audio.filename)[1]
+        except Exception:
+            original_suffix = ""
+
+        # Default to .webm if we can't infer; OpenAI accepts multiple formats.
+        suffix = original_suffix if original_suffix else ".webm"
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_audio:
             temp_audio.write(audio_data)
             temp_audio_path = temp_audio.name
 
-        # Call Whisper API
-        with open(temp_audio_path, "rb") as audio_file:
-            transcript_response = client.audio.transcriptions.create(
-                model="whisper-1",
-                file=audio_file,
-                response_format="verbose_json"  # Get detailed response
-            )
+        # Call OpenAI Speech-to-Text
+        # - Prefer gpt-4o-transcribe (or configured model)
+        # - Fall back to whisper-1 if the configured model fails (keeps system resilient)
+        stt_model = getattr(settings, "openai_stt_model", "gpt-4o-transcribe")
+
+        def _call_transcribe(model_name: str):
+            with open(temp_audio_path, "rb") as audio_file:
+                # Response format support differs across models:
+                # - whisper-1 supports verbose_json (language/duration)
+                # - gpt-4o-*-transcribe typically supports json/text
+                response_format = "verbose_json" if model_name == "whisper-1" else "json"
+                return client.audio.transcriptions.create(
+                    model=model_name,
+                    file=audio_file,
+                    response_format=response_format,
+                )
+
+        try:
+            transcript_response = _call_transcribe(stt_model)
+        except Exception as e:
+            if stt_model != "whisper-1":
+                logger.warning(
+                    f"STT model '{stt_model}' failed; falling back to 'whisper-1'. Error: {e}"
+                )
+                transcript_response = _call_transcribe("whisper-1")
+            else:
+                raise
 
         # Clean up temp file
-        import os
         os.unlink(temp_audio_path)
 
         # Extract results
+        # Keep response shape stable for frontend:
+        # {transcript, language, confidence, duration}
+        transcript_text = getattr(transcript_response, "text", None)
+        if transcript_text is None and isinstance(transcript_response, dict):
+            transcript_text = transcript_response.get("text")
+        if transcript_text is None:
+            transcript_text = str(transcript_response)
+
         result = {
-            "transcript": transcript_response.text,
-            "language": getattr(transcript_response, 'language', 'en'),
-            "confidence": 1.0,  # Whisper doesn't provide confidence, use 1.0
-            "duration": getattr(transcript_response, 'duration', 0.0)
+            "transcript": transcript_text,
+            "language": getattr(transcript_response, "language", "unknown"),
+            "confidence": 1.0,  # OpenAI STT does not reliably provide confidence
+            "duration": float(getattr(transcript_response, "duration", 0.0) or 0.0),
         }
 
         logger.info(f"Transcription successful: '{result['transcript']}'")
@@ -500,9 +538,28 @@ async def execute_voice_command(data: dict):
             execution_status = "rotating"
 
         elif parsed_command.action.value == "navigate":
-            # Navigation (Week 4 - not yet implemented)
-            execution_status = "navigation_not_implemented"
-            logger.warning("Navigate action requires Nav2 integration (Week 4)")
+            # Navigation via Nav2 NavigateToPose
+            params = parsed_command.parameters
+            x = params.get("x")
+            y = params.get("y")
+            theta = float(params.get("theta", 0.0) or 0.0)
+
+            if x is None or y is None:
+                execution_status = "navigation_missing_coordinates"
+                logger.warning("Navigate requested but x/y not provided")
+            else:
+                try:
+                    nav2 = ros2_manager.get_nav2_client()
+                    # Wait briefly for server to be ready (non-blocking overall system)
+                    if not nav2.wait_for_server(timeout_sec=1.5):
+                        execution_status = "nav2_unavailable"
+                        logger.warning("Nav2 action server not available (navigate_to_pose)")
+                    else:
+                        ok = nav2.send_goal(float(x), float(y), theta=float(theta), frame_id=str(params.get("frame_id", "map")))
+                        execution_status = "navigation_goal_sent" if ok else "navigation_goal_rejected"
+                except Exception as e:
+                    logger.error(f"Nav2 navigation failed: {e}")
+                    execution_status = "navigation_error"
 
         else:
             execution_status = "unknown_action"

@@ -215,7 +215,6 @@ class XAINavigatorNode(Node):
         )
         self.backend_sync.set_database(self.decision_db)
         self.backend_sync.start()
-        self.backend_sync.start()
         self.get_logger().info('Backend sync service started')
         
         # Explanation Engine

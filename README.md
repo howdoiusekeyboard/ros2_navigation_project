@@ -13,8 +13,8 @@ A modern, voice-activated interface for ROS 2 navigation. Control your robot usi
 - **🧠 AI-Powered Parsing**: Uses Gemini 2.0 Flash to convert speech into structured ROS 2 Twist messages.
 - **⚡ Real-time Dashboard**: React-based UI with live feedback, voice transcription, and ROS connection status.
 - **🛡️ Robust Architecture**:
-    - **Frontend**: React + Vite + Web Speech API
-    - **Backend**: FastAPI + Gemini SDK
+    - **Frontend**: React + Vite + MediaRecorder (browser audio capture)
+    - **Backend**: FastAPI + OpenAI Speech-to-Text + Gemini
     - **Robot**: ROS 2 Humble (Nav2, Cartographer, AMCL)
 - **🔌 Fallback Mode**: Regex-based command parsing ensures functionality even if the AI API is offline.
 
@@ -23,9 +23,9 @@ A modern, voice-activated interface for ROS 2 navigation. Control your robot usi
 ```mermaid
 graph TD
     User((User)) -->|Voice| Frontend[React Dashboard]
-    Frontend -->|Web Speech API| Browser[Browser Speech Engine]
-    Browser -->|Text| Frontend
-    Frontend -->|Text Command| Backend[FastAPI Server]
+    Frontend -->|Audio Blob| Backend[FastAPI Server]
+    Backend -->|STT| OpenAI[OpenAI Speech-to-Text]
+    OpenAI -->|Transcript| Backend
     Backend -->|Gemini 2.0 Flash| AI[Google AI Studio]
     AI -->|JSON Action| Backend
     Backend -->|Response| Frontend
@@ -49,11 +49,12 @@ graph TD
     ```
 
 2.  **Configure API Keys**
-    Create a `.env` file in `backend/` with your [Gemini API Key](https://aistudio.google.com/app/apikey):
+    Create a `.env` file in `backend/` with your OpenAI + Gemini keys:
     ```bash
     cp backend/.env.example backend/.env
     nano backend/.env
-    # Add: GEMINI_API_KEY=your_key_here
+    # Add: OPENAI_API_KEY=...
+    # Add: GEMINI_API_KEY=...
     ```
 
 3.  **Launch Everything**
@@ -63,7 +64,7 @@ graph TD
     ```
 
 4.  **Access the Dashboard**
-    Open **Chrome** or **Edge** (required for Web Speech API) and navigate to:
+    Open a modern browser (Chrome/Edge recommended for MediaRecorder) and navigate to:
     [http://localhost:5173](http://localhost:5173)
 
 ## 🎮 Usage

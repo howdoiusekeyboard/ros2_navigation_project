@@ -29,6 +29,10 @@ setup(
         'console_scripts': [
             'digital_twin_monitor_node = digital_twin_pkg.digital_twin_monitor_node:main',
             'command_synchronizer_node = digital_twin_pkg.command_synchronizer_node:main',
+            'real_robot_bridge_node = digital_twin_pkg.real_robot_bridge_node:main',
+            'rosbridge_relay_node = digital_twin_pkg.rosbridge_relay_node:main',
+            'behavior_monitor_node = digital_twin_pkg.behavior_monitor_node:main',
+            'xai_bridge_node = digital_twin_pkg.xai_bridge_node:main',
         ],
     },
 )
