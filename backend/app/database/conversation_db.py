@@ -43,8 +43,15 @@ class ConversationDatabase:
         """
         # Resolve path relative to backend directory
         base_path = Path(__file__).parent.parent.parent.resolve()
-        resolved_path = (base_path / db_path).resolve()
-        if not str(resolved_path).startswith(str(base_path)):
+        
+        # Defuse path injection by aggressively sanitizing user input
+        sanitized_filename = os.path.basename(str(db_path))
+        if not sanitized_filename or sanitized_filename in ('.', '..'):
+            sanitized_filename = 'conversations.db'
+            
+        resolved_path = (base_path / 'data' / sanitized_filename).resolve()
+        
+        if not str(resolved_path).startswith(str(base_path / 'data')):
             raise ValueError("Invalid database path for conversation history: Path traversal detected")
         self.db_path = resolved_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -55,7 +62,7 @@ class ConversationDatabase:
         # In-memory cache for spatial references (per session)
         self._spatial_cache: Dict[str, Dict[str, Tuple[float, float, str]]] = {}
 
-        safe_path = str(self.db_path).replace('\r', '').replace('\n', '')
+        safe_path = repr(str(self.db_path))
         logger.info(f"ConversationDatabase initialized at: {safe_path}")
 
     async def connect(self):
@@ -209,11 +216,11 @@ class ConversationDatabase:
                 session_id, location_label, location_x, location_y, location_label
             )
 
-        safe_session = str(session_id).replace('\r', '').replace('\n', '')
-        safe_input = str(user_input[:50]).replace('\r', '').replace('\n', '')
+        safe_session = repr(str(session_id))
+        safe_input = repr(str(user_input[:50]))
         logger.debug(
             f"Stored turn {turn_number} for session {safe_session}: "
-            f"\"{safe_input}...\" (ID: {turn_id})"
+            f"{safe_input}... (ID: {turn_id})"
         )
 
         return turn_id
@@ -430,7 +437,7 @@ class ConversationDatabase:
             del self._spatial_cache[session_id]
 
         deleted_count = cursor.rowcount
-        safe_session = str(session_id).replace('\r', '').replace('\n', '')
+        safe_session = repr(str(session_id))
         logger.info(f"Soft deleted {deleted_count} turns from session {safe_session}")
 
         return deleted_count > 0

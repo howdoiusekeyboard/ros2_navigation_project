@@ -65,8 +65,8 @@ echo "[5/6] XAI Navigator..."
 tmux new-window -t $SESSION -n 'XAI'
 tmux send-keys -t $SESSION:4 "sleep 40" C-m
 tmux send-keys -t $SESSION:4 "cd ~/ros2_navigation_project && source /opt/ros/humble/setup.bash && source install/setup.bash" C-m
-export GEMINI_API_KEY="AIzaSyCImhqg9DxBZiS4EQwxmXFuTKNfA2jCwEU"
-tmux send-keys -t $SESSION:4 "ros2 launch xai_navigation_pkg xai_navigator.launch.py enable_explanations:=true enable_obstacle_weighting:=true gemini_api_key:=$GEMINI_API_KEY" C-m
+tmux send-keys -t $SESSION:4 "if [ -f backend/.env ]; then export \$(grep -v '^#' backend/.env | xargs); fi" C-m
+tmux send-keys -t $SESSION:4 "ros2 launch xai_navigation_pkg xai_navigator.launch.py enable_explanations:=true enable_obstacle_weighting:=true gemini_api_key:=\$GEMINI_API_KEY" C-m
 
 # Window 5: YOLO (CPU MODE - GPU incompatible, fallback to CPU)
 echo "[6/6] YOLO perception (CPU mode - GPU has CUDA compatibility issue)..."

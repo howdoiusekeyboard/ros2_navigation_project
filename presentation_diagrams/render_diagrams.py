@@ -25,10 +25,16 @@ def render_diagram(mmd_file: Path, output_file: Path):
         mermaid_code = f.read()
     
     # Encode for API
-    encoded = encode_mermaid(mermaid_code)
+    import urllib.parse
+    encoded = urllib.parse.quote(encode_mermaid(mermaid_code))
     
     # Try mermaid.ink API
     api_url = f"https://mermaid.ink/img/{encoded}"
+    
+    # Strict SSRF validation
+    if not api_url.startswith("https://mermaid.ink/img/"):
+        print(f"✗ Invalid API URL generated for {mmd_file.name}")
+        return False
     
     try:
         response = requests.get(api_url, timeout=30)

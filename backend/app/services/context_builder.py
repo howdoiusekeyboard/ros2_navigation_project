@@ -302,6 +302,10 @@ class ContextBuilder:
         Returns:
             (x, y) tuple or None if no coordinates found
         """
+        # Truncate text to max 250 characters to completely prevent polynomial ReDoS 
+        # backtracking on excessively long malicious inputs.
+        text = text[:250]
+        
         # Pattern 1: "2, 3" or "2.5, 3.1"
         coord_pattern_1 = r'(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)'
 

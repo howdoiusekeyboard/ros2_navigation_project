@@ -162,8 +162,16 @@ class DigitalTwinMonitorNode(Node):
             if not os.path.exists(resolved_path):
                 return
 
+            class SafeUnpickler(pickle.Unpickler):
+                def find_class(self, module, name):
+                    # Strict whitelist of allowed modules for scikit-learn models
+                    allowed_modules = ('sklearn', 'numpy', 'builtins', '_codecs')
+                    if any(module == m or module.startswith(m + '.') for m in allowed_modules):
+                        return super().find_class(module, name)
+                    raise pickle.UnpicklingError(f"Unsafe deserialization blocked: '{module}.{name}' is forbidden")
+
             with open(resolved_path, "rb") as f:
-                payload = pickle.load(f)
+                payload = SafeUnpickler(f).load()
 
             # Accept either raw model or payload dict
             if isinstance(payload, dict) and "model" in payload:

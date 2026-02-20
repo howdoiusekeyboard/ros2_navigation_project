@@ -113,4 +113,5 @@ presentation_diagrams/*.mmd
 PRESENTATION_PACKAGE.md
 PRESENTATION_QUICK_REFERENCE.md
 secret_alerts.json
+code_alerts.json
 *.pt
