@@ -152,11 +152,43 @@ class DigitalTwinMonitorNode(Node):
     def _try_load_model(self) -> None:
         """Load persisted IsolationForest model from disk if available."""
         try:
-            if not os.path.exists(self.model_path):
+            from pathlib import Path
+            safe_base = os.path.abspath(os.path.expanduser('~/.ros/digital_twin'))
+            resolved_path = os.path.abspath(self.model_path)
+            
+            # Use strict path containment validation (Python 3.8+ compatible)
+            try:
+                Path(resolved_path).relative_to(Path(safe_base))
+                is_relative = True
+            except ValueError:
+                is_relative = False
+                
+            if not is_relative:
+                self.get_logger().error("Invalid model path: refusing to read outside safe directory")
                 return
 
-            with open(self.model_path, "rb") as f:
-                payload = pickle.load(f)
+            if not os.path.exists(resolved_path):
+                return
+
+            class SafeUnpickler(pickle.Unpickler):
+                def find_class(self, module, name):
+                    # Strict whitelist of allowed modules for scikit-learn models
+                    allowed_builtins = {
+                        'tuple', 'list', 'dict', 'set', 'frozenset', 'int', 'float', 
+                        'str', 'bytes', 'bool', 'object', 'type', 'slice'
+                    }
+                    
+                    if module == 'builtins' and name in allowed_builtins:
+                        return super().find_class(module, name)
+                    
+                    allowed_modules = ('sklearn', 'numpy', '_codecs')
+                    if any(module == m or module.startswith(m + '.') for m in allowed_modules):
+                        return super().find_class(module, name)
+                        
+                    raise pickle.UnpicklingError(f"Unsafe deserialization blocked: '{module}.{name}' is forbidden")
+
+            with open(resolved_path, "rb") as f:
+                payload = SafeUnpickler(f).load()
 
             # Accept either raw model or payload dict
             if isinstance(payload, dict) and "model" in payload:
@@ -175,13 +207,28 @@ class DigitalTwinMonitorNode(Node):
     def _persist_model(self) -> None:
         """Persist trained model to disk."""
         try:
-            os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
-            with open(self.model_path, "wb") as f:
+            from pathlib import Path
+            safe_base = os.path.abspath(os.path.expanduser('~/.ros/digital_twin'))
+            resolved_path = os.path.abspath(self.model_path)
+            
+            # Apply symmetric path containment validation (Python 3.8+ compatible)
+            try:
+                Path(resolved_path).relative_to(Path(safe_base))
+                is_relative = True
+            except ValueError:
+                is_relative = False
+                
+            if not is_relative:
+                self.get_logger().error("Invalid model path: refusing to write outside safe directory")
+                return
+                
+            os.makedirs(os.path.dirname(resolved_path), exist_ok=True)
+            with open(resolved_path, "wb") as f:
                 pickle.dump(
                     {"model": self.anomaly_model, "feature_names": self._feature_names, "created_at": time.time()},
                     f,
                 )
-            self.get_logger().info(f"Saved anomaly model to {self.model_path}")
+            self.get_logger().info(f"Saved anomaly model to {resolved_path}")
         except Exception as e:
             self.get_logger().error(f"Failed to save anomaly model: {e}")
 
@@ -268,7 +315,7 @@ class DigitalTwinMonitorNode(Node):
             # Approximate theta from quaternion (assumes 2D)
             real_theta = 2 * math.atan2(real_orient.z, real_orient.w)
             twin_theta = 2 * math.atan2(twin_orient.z, twin_orient.w)
-            features['orientation_diff'] = real_theta - twin_theta
+            features['orientation_diff'] = (real_theta - twin_theta + math.pi) % (2 * math.pi) - math.pi
 
             # Velocity differences
             real_vel = self.real_odom.twist.twist

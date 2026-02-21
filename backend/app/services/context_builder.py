@@ -302,31 +302,33 @@ class ContextBuilder:
         Returns:
             (x, y) tuple or None if no coordinates found
         """
+        MAX_QUERY_LENGTH = 250
+
+        # Truncate text to max length to completely prevent polynomial ReDoS 
+        # backtracking on excessively long malicious inputs.
+        if len(text) > MAX_QUERY_LENGTH:
+            logger.warning(f"Query exceeded length limit. Truncating to {MAX_QUERY_LENGTH} characters to prevent ReDoS.")
+        text = text[:MAX_QUERY_LENGTH]
+        
         # Pattern 1: "2, 3" or "2.5, 3.1"
-        coord_pattern_1 = r'(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)'
+        coord_pattern_1 = r'(-?\d+(?:\.\d+)?)\s{0,5},\s{0,5}(-?\d+(?:\.\d+)?)'
 
         # Pattern 2: "x=2 y=3" or "x:2 y:3"
-        coord_pattern_2 = r'x\s*[=:]\s*(-?\d+\.?\d*)\s+y\s*[=:]\s*(-?\d+\.?\d*)'
+        coord_pattern_2 = r'x\s{0,5}[=:]\s{0,5}(-?\d+(?:\.\d+)?)\s{1,5}y\s{0,5}[=:]\s{0,5}(-?\d+(?:\.\d+)?)'
 
         # Try pattern 1
         match = re.search(coord_pattern_1, text)
         if match:
-            try:
-                x = float(match.group(1))
-                y = float(match.group(2))
-                return (x, y)
-            except ValueError:
-                pass
+            x = float(match.group(1))
+            y = float(match.group(2))
+            return (x, y)
 
         # Try pattern 2
         match = re.search(coord_pattern_2, text.lower())
         if match:
-            try:
-                x = float(match.group(1))
-                y = float(match.group(2))
-                return (x, y)
-            except ValueError:
-                pass
+            x = float(match.group(1))
+            y = float(match.group(2))
+            return (x, y)
 
         return None
 

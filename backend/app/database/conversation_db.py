@@ -42,7 +42,21 @@ class ConversationDatabase:
             db_path: Path to SQLite database file (relative to backend root)
         """
         # Resolve path relative to backend directory
-        self.db_path = Path(__file__).parent.parent.parent / db_path
+        base_path = Path(__file__).parent.parent.parent.resolve()
+        data_dir_str = os.path.abspath(str(base_path / 'data'))
+        
+        # Defuse path injection by aggressively sanitizing user input
+        sanitized_filename = os.path.basename(str(db_path))
+        if not sanitized_filename or sanitized_filename in ('.', '..'):
+            raise ValueError("Database path is missing or resolves to current/parent directory")
+            
+        resolved_path_str = os.path.abspath(os.path.join(data_dir_str, sanitized_filename))
+        
+        # Robust path traversal immunity using backward-compatible checks
+        if os.path.commonpath([data_dir_str, resolved_path_str]) != data_dir_str:
+            raise ValueError("Invalid database path for conversation history: Path traversal detected")
+             
+        self.db_path = Path(resolved_path_str)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         self._connection: Optional[aiosqlite.Connection] = None
@@ -51,7 +65,8 @@ class ConversationDatabase:
         # In-memory cache for spatial references (per session)
         self._spatial_cache: Dict[str, Dict[str, Tuple[float, float, str]]] = {}
 
-        logger.info(f"ConversationDatabase initialized at: {self.db_path}")
+        safe_path = repr(str(self.db_path))
+        logger.info("ConversationDatabase initialized at: %s", safe_path)
 
     async def connect(self):
         """Establish database connection and initialize schema."""
@@ -204,9 +219,11 @@ class ConversationDatabase:
                 session_id, location_label, location_x, location_y, location_label
             )
 
+        safe_session = repr(session_id)
+        safe_input = repr(user_input[:50])
         logger.debug(
-            f"Stored turn {turn_number} for session {session_id}: "
-            f"\"{user_input[:50]}...\" (ID: {turn_id})"
+            "Stored turn %s for session %s: %s... (ID: %s)",
+            turn_number, safe_session, safe_input, turn_id
         )
 
         return turn_id
@@ -423,7 +440,8 @@ class ConversationDatabase:
             del self._spatial_cache[session_id]
 
         deleted_count = cursor.rowcount
-        logger.info(f"Soft deleted {deleted_count} turns from session {session_id}")
+        safe_session = repr(session_id)
+        logger.info("Soft deleted %s turns from session %s", deleted_count, safe_session)
 
         return deleted_count > 0
 
@@ -444,7 +462,7 @@ class ConversationDatabase:
         await self._connection.commit()
 
         deleted_count = cursor.rowcount
-        logger.info(f"Cleaned up {deleted_count} old conversation turns")
+        logger.info("Cleaned up %s old conversation turns", deleted_count)
 
         return deleted_count
 

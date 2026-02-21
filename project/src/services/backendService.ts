@@ -326,8 +326,10 @@ class BackendService {
     let sessionId = localStorage.getItem('conversation_session_id');
 
     if (!sessionId) {
-      // Generate new session ID: timestamp-random
-      sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      // Generate new session ID: timestamp-random using crypto for secure randomness
+      const array = new Uint32Array(1);
+      window.crypto.getRandomValues(array);
+      sessionId = `session_${Date.now()}_${array[0].toString(36).substring(0, 7)}`;
       localStorage.setItem('conversation_session_id', sessionId);
     }
 

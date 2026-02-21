@@ -32,6 +32,31 @@ class SystemEvaluator:
     """Evaluates the intelligent navigation system for research metrics."""
 
     def __init__(self, backend_url: str, verbose: bool = False):
+        import urllib.parse
+        parsed = urllib.parse.urlparse(backend_url)
+        if parsed.scheme not in ('http', 'https'):
+            raise ValueError("Backend URL must use http or https scheme")
+            
+        # Strict SSRF mitigation for testing script
+        import socket
+        import ipaddress
+
+        hostname = parsed.hostname
+        if not hostname:
+            raise ValueError("Backend URL must include a hostname")
+
+        # Resolve hostname and strictly ensure all IPs are loopback to prevent DNS rebinding
+        try:
+            addr_info = socket.getaddrinfo(hostname, parsed.port or 80)
+            for res in addr_info:
+                ip = res[4][0]
+                # Strip potential IPv6 scope id
+                ip_clean = ip.split('%')[0]
+                if not ipaddress.ip_address(ip_clean).is_loopback:
+                     raise ValueError("Strict SSRF protection: Resolved backend IP is not a permitted loopback address.")
+        except socket.gaierror:
+            raise ValueError("Strict SSRF protection: Could not resolve hostname.")
+             
         self.backend_url = backend_url.rstrip("/")
         self.verbose = verbose
         self.results: Dict[str, Any] = {
@@ -237,8 +262,10 @@ def main():
     evaluator = SystemEvaluator(args.backend_url, verbose=args.verbose)
     results = evaluator.run_evaluation()
 
-    # Save results
-    with open(args.output, "w") as f:
+    # Sanitize output path against path injection
+    safe_filename = os.path.basename(str(args.output))
+    safe_output_path = Path.cwd() / safe_filename
+    with open(safe_output_path, "w") as f:
         json.dump(results, f, indent=2, default=str)
 
     print(f"\n{'='*60}")

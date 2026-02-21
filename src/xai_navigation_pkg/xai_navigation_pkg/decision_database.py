@@ -40,6 +40,7 @@ class DecisionDatabase:
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.conn.execute('PRAGMA journal_mode=WAL')
         self.conn.execute('PRAGMA synchronous=NORMAL')
+        self.conn.execute('PRAGMA foreign_keys=ON')
 
         self._init_schema()
 
@@ -99,7 +100,7 @@ class DecisionDatabase:
             )
         ''')
 
-        # Obstacle events table
+        # Obstacle events table - Extended for weighted classification
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS obstacle_events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,6 +111,14 @@ class DecisionDatabase:
                 distance_to_robot REAL,
                 severity TEXT,
                 action_taken TEXT,
+                -- NEW: Weighted Classification Fields (Week 4+)
+                obstacle_type TEXT,           -- human, vehicle, furniture, wall, unknown
+                priority_weight REAL,         -- weighted priority score
+                classification_confidence REAL, -- 0.0 to 1.0
+                classification_reasoning TEXT, -- human-readable explanation
+                zone_name TEXT,               -- semantic zone if applicable
+                estimated_velocity REAL,      -- m/s if moving
+                estimated_size REAL,          -- estimated width in meters
                 synced_to_backend INTEGER DEFAULT 0,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (decision_id) REFERENCES navigation_decisions(id)
@@ -145,6 +154,39 @@ class DecisionDatabase:
             ON telemetry_snapshots(synced_to_backend)
         ''')
 
+        self.conn.commit()
+        
+        # Run schema migrations in case db predates new columns
+        self._migrate_schema()
+
+    def _migrate_schema(self):
+        """Migrate existing tables to include new columns."""
+        cursor = self.conn.cursor()
+        
+        # Determine existing columns in obstacle_events
+        cursor.execute('PRAGMA table_info(obstacle_events)')
+        columns = [row[1] for row in cursor.fetchall()]
+        
+        # Define expected new columns and their types
+        new_columns = {
+            'obstacle_type': 'TEXT',
+            'priority_weight': 'REAL',
+            'classification_confidence': 'REAL',
+            'classification_reasoning': 'TEXT',
+            'zone_name': 'TEXT',
+            'estimated_velocity': 'REAL',
+            'estimated_size': 'REAL'
+        }
+        
+        # Add any missing columns
+        for col, col_type in new_columns.items():
+            if col not in columns:
+                try:
+                    cursor.execute(f'ALTER TABLE obstacle_events ADD COLUMN {col} {col_type}')
+                except sqlite3.OperationalError as e:
+                    # Ignore duplicate column errors if they randomly occur
+                    pass
+                    
         self.conn.commit()
 
     def log_decision(
@@ -230,7 +272,7 @@ class DecisionDatabase:
 
     def log_path_change(
         self,
-        decision_id: int,
+        decision_id: Optional[int],
         old_length: float,
         new_length: float,
         max_deviation: float,
@@ -257,20 +299,50 @@ class DecisionDatabase:
 
     def log_obstacle_event(
         self,
-        decision_id: int,
+        decision_id: Optional[int],
         obstacle_x: float,
         obstacle_y: float,
         distance: float,
         severity: str,
-        action: str
+        action: str,
+        # NEW: Classification fields (Week 4+)
+        obstacle_type: Optional[str] = None,
+        priority_weight: Optional[float] = None,
+        classification_confidence: Optional[float] = None,
+        classification_reasoning: Optional[str] = None,
+        zone_name: Optional[str] = None,
+        estimated_velocity: Optional[float] = None,
+        estimated_size: Optional[float] = None
     ) -> int:
-        """Log an obstacle detection event."""
+        """
+        Log an obstacle detection event with optional classification.
+
+        Args:
+            decision_id: Related navigation decision ID
+            obstacle_x, obstacle_y: Obstacle position
+            distance: Distance from robot
+            severity: Severity level (critical, warning, info)
+            action: Action taken (detected, stop, replan)
+            obstacle_type: Classification type (human, vehicle, furniture, wall, unknown)
+            priority_weight: Weighted priority score
+            classification_confidence: Confidence in classification (0.0-1.0)
+            classification_reasoning: Human-readable explanation
+            zone_name: Semantic zone name if applicable
+            estimated_velocity: Estimated velocity in m/s
+            estimated_size: Estimated size in meters
+
+        Returns:
+            Database ID of logged event
+        """
         cursor = self.conn.cursor()
         cursor.execute('''
             INSERT INTO obstacle_events (
                 decision_id, timestamp, obstacle_x, obstacle_y,
-                distance_to_robot, severity, action_taken
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                distance_to_robot, severity, action_taken,
+                obstacle_type, priority_weight, classification_confidence,
+                classification_reasoning, zone_name,
+                estimated_velocity, estimated_size
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             decision_id,
             datetime.now().timestamp(),
@@ -278,7 +350,14 @@ class DecisionDatabase:
             obstacle_y,
             distance,
             severity,
-            action
+            action,
+            obstacle_type,
+            priority_weight,
+            classification_confidence,
+            classification_reasoning,
+            zone_name,
+            estimated_velocity,
+            estimated_size
         ))
 
         self.conn.commit()

@@ -3,16 +3,29 @@
 Obstacle Detector - Identifies obstacles affecting navigation and their impact.
 
 Week 3: Core analysis component for understanding navigation constraints.
+Week 4+: Extended with weighted obstacle classification (Tesla-style).
 
 Provides:
 - Obstacle detection along planned paths
 - Impact severity classification
 - Avoidance suggestion generation
+- Weighted obstacle classification (human > vehicle > furniture)
+- Priority-based obstacle ranking
 """
 
 import math
+import time
 from typing import List, Tuple, Optional, Dict, Any
 from nav_msgs.msg import Path
+
+# Import classifier (handle import error gracefully for testing)
+try:
+    from .obstacle_classifier import ObstacleClassifier, ObstacleClassification
+    CLASSIFIER_AVAILABLE = True
+except ImportError:
+    CLASSIFIER_AVAILABLE = False
+    ObstacleClassifier = None
+    ObstacleClassification = None
 
 
 class ObstacleDetector:
@@ -28,7 +41,10 @@ class ObstacleDetector:
     def __init__(
         self,
         critical_distance: float = 0.3,
-        warning_distance: float = 1.0
+        warning_distance: float = 1.0,
+        enable_classification: bool = True,
+        zones_config_path: Optional[str] = None,
+        custom_weights: Optional[Dict[str, float]] = None
     ):
         """
         Initialize obstacle detector.
@@ -36,12 +52,29 @@ class ObstacleDetector:
         Args:
             critical_distance: Distance (m) considered critical
             warning_distance: Distance (m) considered warning
+            enable_classification: Enable weighted obstacle classification
+            zones_config_path: Path to semantic zones YAML config
+            custom_weights: Custom priority weights for obstacle types
         """
         self.critical_distance = critical_distance
         self.warning_distance = warning_distance
 
         # Track detected obstacles
         self.current_obstacles: List[Dict[str, Any]] = []
+
+        # Track previous obstacle positions for velocity estimation
+        self._previous_obstacles: Dict[str, Tuple[float, float, float]] = {}
+        self._last_detection_time: float = 0.0
+
+        # Initialize classifier if available and enabled
+        self.enable_classification = enable_classification and CLASSIFIER_AVAILABLE
+        self.classifier: Optional[ObstacleClassifier] = None
+
+        if self.enable_classification:
+            self.classifier = ObstacleClassifier(
+                weights=custom_weights,
+                zones_config_path=zones_config_path
+            )
 
     def detect_on_path(
         self,
@@ -281,8 +314,194 @@ class ObstacleDetector:
     def clear_obstacles(self):
         """Clear tracked obstacles."""
         self.current_obstacles = []
+        self._previous_obstacles = {}
 
     @property
     def has_obstacles(self) -> bool:
         """Check if any obstacles are currently tracked."""
         return len(self.current_obstacles) > 0
+
+    # === NEW: Weighted Classification Methods (Week 4+) ===
+
+    def classify_obstacle(
+        self,
+        obstacle: Dict[str, Any],
+        costmap_processor=None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Classify an obstacle with weighted priority (Tesla-style).
+
+        Args:
+            obstacle: Obstacle dict with 'x', 'y' coordinates
+            costmap_processor: Optional CostmapProcessor for size estimation
+
+        Returns:
+            Classification dict with type, weight, confidence, reasoning
+            or None if classification is disabled
+        """
+        if not self.enable_classification or self.classifier is None:
+            return None
+
+        # Get obstacle ID for velocity tracking
+        obs_id = self._get_obstacle_id(obstacle)
+
+        # Get previous position for velocity estimation
+        prev_pos = None
+        dt = 0.5  # default
+        current_time = time.time()
+
+        if obs_id in self._previous_obstacles:
+            prev_time, prev_x, prev_y = self._previous_obstacles[obs_id]
+            prev_pos = (prev_x, prev_y)
+            dt = max(current_time - prev_time, 0.1)
+
+        # Classify the obstacle
+        classification = self.classifier.classify(
+            obstacle,
+            costmap_processor=costmap_processor,
+            previous_position=prev_pos,
+            dt=dt
+        )
+
+        # Update position history for next velocity calculation
+        self._previous_obstacles[obs_id] = (
+            current_time,
+            obstacle.get('x', 0.0),
+            obstacle.get('y', 0.0)
+        )
+
+        # Clean up old entries
+        self._cleanup_position_history(current_time)
+
+        # Convert to dict for serialization
+        return {
+            'obstacle_type': classification.obstacle_type,
+            'priority_weight': classification.priority_weight,
+            'confidence': classification.confidence,
+            'reasoning': classification.reasoning,
+            'contributing_factors': classification.contributing_factors,
+            'zone_name': classification.zone_name,
+            'estimated_velocity': classification.estimated_velocity,
+            'estimated_size': classification.estimated_size
+        }
+
+    def detect_and_classify(
+        self,
+        path: Path,
+        costmap_processor,
+        current_position: Optional[Tuple[float, float]] = None,
+        check_radius: float = 0.5
+    ) -> Dict[str, Any]:
+        """
+        Detect obstacles and classify them with weighted priorities.
+
+        Combines detect_on_path with classification for complete analysis.
+
+        Args:
+            path: Planned navigation path
+            costmap_processor: CostmapProcessor instance
+            current_position: Robot's current (x, y) position
+            check_radius: Radius to check around path waypoints
+
+        Returns:
+            Enhanced detection results with classification data
+        """
+        # First do standard detection
+        detection = self.detect_on_path(
+            path, costmap_processor, current_position, check_radius
+        )
+
+        if not detection.get('detected'):
+            return detection
+
+        # Add classification to each obstacle
+        classified_obstacles = []
+        for obs in detection.get('obstacles', []):
+            classification = self.classify_obstacle(obs, costmap_processor)
+            if classification:
+                obs['classification'] = classification
+                obs['priority_weight'] = classification['priority_weight']
+                obs['obstacle_type'] = classification['obstacle_type']
+            classified_obstacles.append(obs)
+
+        # Sort by priority (highest first)
+        classified_obstacles.sort(
+            key=lambda o: o.get('priority_weight', 0),
+            reverse=True
+        )
+
+        # Update detection results
+        detection['obstacles'] = classified_obstacles
+        detection['classification_enabled'] = self.enable_classification
+
+        # Update closest to be highest priority obstacle
+        if classified_obstacles:
+            detection['highest_priority'] = classified_obstacles[0]
+
+        return detection
+
+    def get_priority_explanation(
+        self,
+        obstacle: Dict[str, Any]
+    ) -> str:
+        """
+        Get human-friendly explanation of obstacle priority.
+
+        Args:
+            obstacle: Obstacle with classification data
+
+        Returns:
+            Explanation string suitable for XAI display
+        """
+        if not self.classifier:
+            return "Obstacle detected"
+
+        classification = obstacle.get('classification')
+        if not classification:
+            return "Unclassified obstacle detected"
+
+        # Create mock classification for priority explanation
+        class MockClassification:
+            pass
+
+        mock = MockClassification()
+        mock.obstacle_type = classification.get('obstacle_type', 'unknown')
+
+        return self.classifier.get_priority_explanation(mock)
+
+    def _get_obstacle_id(self, obstacle: Dict[str, Any]) -> str:
+        """Generate a unique ID for obstacle based on position."""
+        x = obstacle.get('x', 0.0)
+        y = obstacle.get('y', 0.0)
+        # Round to 0.1m grid for consistent IDs
+        return f"obs_{int(x*10)}_{int(y*10)}"
+
+    def _cleanup_position_history(self, current_time: float, max_age: float = 5.0):
+        """Remove old position entries."""
+        cutoff = current_time - max_age
+        to_remove = [
+            obs_id for obs_id, (t, _, _) in self._previous_obstacles.items()
+            if t < cutoff
+        ]
+        for obs_id in to_remove:
+            del self._previous_obstacles[obs_id]
+
+    def load_zones(self, config_path: str) -> bool:
+        """
+        Load semantic zones configuration.
+
+        Args:
+            config_path: Path to zones YAML file
+
+        Returns:
+            True if loaded successfully
+        """
+        if self.classifier:
+            return self.classifier.load_zones(config_path)
+        return False
+
+    @property
+    def classification_enabled(self) -> bool:
+        """Check if classification is enabled and available."""
+        return self.enable_classification and self.classifier is not None
+

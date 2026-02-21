@@ -1,0 +1,337 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <world name="weighted_xai_demo">
+    <!-- Physics settings -->
+    <physics type="ode">
+      <real_time_update_rate>1000.0</real_time_update_rate>
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+    </physics>
+
+    <!-- Scene settings -->
+    <scene>
+      <ambient>0.4 0.4 0.4 1</ambient>
+      <background>0.7 0.7 0.7 1</background>
+      <shadows>true</shadows>
+    </scene>
+
+    <!-- Lighting -->
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <!-- Ground plane -->
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <!-- =====================================================
+         ENVIRONMENT: Indoor Office-like Space (15m x 15m)
+         ===================================================== -->
+
+    <!-- Walls to create a bounded space -->
+    <model name="wall_north">
+      <static>true</static>
+      <pose>0 7.5 1 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box><size>15 0.2 2</size></box>
+          </geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.7 0.7 0.7 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box><size>15 0.2 2</size></box>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+    <model name="wall_south">
+      <static>true</static>
+      <pose>0 -7.5 1 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box><size>15 0.2 2</size></box>
+          </geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.7 0.7 0.7 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box><size>15 0.2 2</size></box>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+    <model name="wall_east">
+      <static>true</static>
+      <pose>7.5 0 1 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box><size>0.2 15 2</size></box>
+          </geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.7 0.7 0.7 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box><size>0.2 15 2</size></box>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+    <model name="wall_west">
+      <static>true</static>
+      <pose>-7.5 0 1 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box><size>0.2 15 2</size></box>
+          </geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.7 0.7 0.7 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box><size>0.2 15 2</size></box>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- =====================================================
+         HUMAN ZONE: Hallway area (center of the map)
+         Priority: 10.0 (highest - Tesla-style)
+         ===================================================== -->
+
+    <!-- Person 1: Standing in hallway -->
+    <include>
+      <uri>model://standing_person</uri>
+      <name>person_1</name>
+      <pose>2.0 0 0 0 0 0</pose>
+    </include>
+
+    <!-- Person 2: Near entrance -->
+    <include>
+      <uri>model://standing_person</uri>
+      <name>person_2</name>
+      <pose>-3.0 4.0 0 0 0 0.5</pose>
+    </include>
+
+    <!-- =====================================================
+         VEHICLE ZONE: Cart/Wheelchair in corridors
+         Priority: 5.0 (high)
+         ===================================================== -->
+
+    <!-- Shopping Cart in corridor -->
+    <include>
+      <uri>model://cart</uri>
+      <name>cart_1</name>
+      <pose>-2.0 -2.0 0 0 0 0.3</pose>
+    </include>
+
+    <!-- =====================================================
+         FURNITURE ZONE: Office area
+         Priority: 2.0 (low)
+         ===================================================== -->
+
+    <!-- Office chairs scattered around -->
+    <include>
+      <uri>model://office_chair</uri>
+      <name>chair_1</name>
+      <pose>4.0 3.0 0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://office_chair</uri>
+      <name>chair_2</name>
+      <pose>4.5 4.5 0 0 0 0.8</pose>
+    </include>
+
+    <include>
+      <uri>model://office_chair</uri>
+      <name>chair_3</name>
+      <pose>-4.0 -4.0 0 0 0 -0.5</pose>
+    </include>
+
+    <!-- Table (simple box) -->
+    <model name="table_1">
+      <static>true</static>
+      <pose>5.0 4.0 0.4 0 0 0</pose>
+      <link name="link">
+        <visual name="tabletop">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <box><size>1.2 0.8 0.05</size></box>
+          </geometry>
+          <material>
+            <ambient>0.5 0.3 0.1 1</ambient>
+            <diffuse>0.6 0.4 0.2 1</diffuse>
+          </material>
+        </visual>
+        <visual name="leg1">
+          <pose>0.5 0.3 -0.2 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.03</radius>
+              <length>0.4</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.3 0.3 0.3 1</ambient>
+            <diffuse>0.3 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+        <visual name="leg2">
+          <pose>0.5 -0.3 -0.2 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.03</radius>
+              <length>0.4</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.3 0.3 0.3 1</ambient>
+            <diffuse>0.3 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+        <visual name="leg3">
+          <pose>-0.5 0.3 -0.2 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.03</radius>
+              <length>0.4</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.3 0.3 0.3 1</ambient>
+            <diffuse>0.3 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+        <visual name="leg4">
+          <pose>-0.5 -0.3 -0.2 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.03</radius>
+              <length>0.4</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.3 0.3 0.3 1</ambient>
+            <diffuse>0.3 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <pose>0 0 -0.2 0 0 0</pose>
+          <geometry>
+            <box><size>1.2 0.8 0.45</size></box>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Storage boxes -->
+    <model name="box_1">
+      <static>true</static>
+      <pose>-5.0 2.0 0.25 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box><size>0.5 0.4 0.5</size></box>
+          </geometry>
+          <material>
+            <ambient>0.6 0.4 0.2 1</ambient>
+            <diffuse>0.7 0.5 0.3 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box><size>0.5 0.4 0.5</size></box>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+    <model name="box_2">
+      <static>true</static>
+      <pose>-5.0 2.5 0.25 0 0 0.2</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box><size>0.4 0.4 0.5</size></box>
+          </geometry>
+          <material>
+            <ambient>0.6 0.4 0.2 1</ambient>
+            <diffuse>0.7 0.5 0.3 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box><size>0.4 0.4 0.5</size></box>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- =====================================================
+         DEMO SCENARIO MARKERS
+         (invisible navigation goals for testing)
+         ===================================================== -->
+
+    <!-- Robot spawn point marker (visual only) -->
+    <model name="spawn_marker">
+      <static>true</static>
+      <pose>-6.0 -6.0 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <cylinder>
+              <radius>0.3</radius>
+              <length>0.02</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0 0.8 0 0.5</ambient>
+            <diffuse>0 1 0 0.5</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Goal marker (visual only) -->
+    <model name="goal_marker">
+      <static>true</static>
+      <pose>6.0 6.0 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <cylinder>
+              <radius>0.3</radius>
+              <length>0.02</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.8 0 0 0.5</ambient>
+            <diffuse>1 0 0 0.5</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

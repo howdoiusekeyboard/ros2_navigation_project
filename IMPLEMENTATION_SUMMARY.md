@@ -284,7 +284,7 @@ Transformed a 20%-complete academic project into a **fully functional voice-cont
 **IMPORTANT:** You exposed your API key earlier. Generate a NEW one:
 
 1. Go to: https://aistudio.google.com/app/apikey
-2. Revoke the old key (`AIzaSyD4lPmsoFCPFiutan-G58D1dcFeIZA-xBA`)
+2. Revoke the old key (`<YOUR_OLD_KEY>`)
 3. Click "Create API Key"
 4. Copy the new key
 

@@ -43,10 +43,24 @@ backend/venv/
 *.db
 *.sqlite
 *.log
-backend/.env
 CLAUDE.md
 /new_sem/screenshots
 backend/env
 backend/data/conversations.db-wal
 backend/data/conversations.db-shm
-backend/.env
+
+# Latex Reports
+report_latex/
+presentation_diagrams/bitslogo.png
+2022A7PS0226U_KushagraGolash_CSF366_MidSemReport.pdf
+2022A7PS0226U_KushagraGolash_CSF366_MidSemReport.docx
+
+
+PRESENTATION_PACKAGE.md
+PRESENTATION_QUICK_REFERENCE.md
+secret_alerts.json
+code_alerts.json
+alerts_raw.json
+pr_comments.txt
+*.pt
+*.mmd

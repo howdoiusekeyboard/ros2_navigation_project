@@ -41,12 +41,34 @@ def generate_launch_description():
     pkg_turtlebot3_gazebo = get_package_share_directory('turtlebot3_gazebo')
 
     # URDF model path - use TURTLEBOT3_MODEL env var (default: waffle_pi)
-    turtlebot3_model = os.environ.get('TURTLEBOT3_MODEL', 'waffle_pi')
-    urdf_file = os.path.join(
+    _VALID_TB3_MODELS = {'burger', 'waffle', 'waffle_pi'}
+    _DEFAULT_TB3_MODEL = 'waffle_pi'
+    turtlebot3_model = os.environ.get('TURTLEBOT3_MODEL', _DEFAULT_TB3_MODEL)
+    
+    # Prevent path traversal: strip directory components, then enforce allowlist
+    turtlebot3_model = os.path.basename(turtlebot3_model)
+    if turtlebot3_model not in _VALID_TB3_MODELS:
+        import warnings
+        warnings.warn(
+            f"Unrecognised TURTLEBOT3_MODEL '{turtlebot3_model}'; "
+            f"falling back to '{_DEFAULT_TB3_MODEL}'.",
+            stacklevel=2,
+        )
+        turtlebot3_model = _DEFAULT_TB3_MODEL
+
+    urdf_file = os.path.abspath(os.path.join(
         pkg_turtlebot3_gazebo,
         'urdf',
         f'turtlebot3_{turtlebot3_model}.urdf'
-    )
+    ))
+    
+    urdf_safe_dir = os.path.abspath(os.path.join(pkg_turtlebot3_gazebo, 'urdf'))
+    if os.path.commonpath([urdf_safe_dir, urdf_file]) != urdf_safe_dir:
+        raise ValueError(f"Path traversal detected for model: {turtlebot3_model}")
+
+    # Read URDF content once to prevent file handle leaks
+    with open(urdf_file, 'r') as _f:
+        urdf_content = _f.read()
 
     # World file (using default TurtleBot3 world)
     world_file = os.path.join(
@@ -163,7 +185,7 @@ def generate_launch_description():
             condition=UnlessCondition(use_physical_real),
             parameters=[{
                 'use_sim_time': use_sim_time,
-                'robot_description': open(urdf_file).read()
+                'robot_description': urdf_content
             }],
             remappings=[
                 ('/tf', '/real/tf'),
@@ -198,7 +220,7 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'use_sim_time': use_sim_time,
-                'robot_description': open(urdf_file).read()
+                'robot_description': urdf_content
             }],
             remappings=[
                 ('/tf', '/twin/tf'),
