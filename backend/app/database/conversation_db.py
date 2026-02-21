@@ -48,7 +48,7 @@ class ConversationDatabase:
         # Defuse path injection by aggressively sanitizing user input
         sanitized_filename = os.path.basename(str(db_path))
         if not sanitized_filename or sanitized_filename in ('.', '..'):
-            raise ValueError("Missing or invalid db_path")
+            raise ValueError("Database path is missing or resolves to current/parent directory")
             
         resolved_path_str = os.path.abspath(os.path.join(data_dir_str, sanitized_filename))
         

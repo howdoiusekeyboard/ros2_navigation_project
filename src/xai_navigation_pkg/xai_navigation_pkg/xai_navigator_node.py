@@ -394,7 +394,7 @@ class XAINavigatorNode(Node):
                 # Store in database
                 if self.enable_logging:
                     self.decision_db.log_path_change(
-                        0,
+                        None,
                         comparison['old_length'],
                         comparison['new_length'],
                         comparison['max_deviation'],
@@ -526,7 +526,7 @@ class XAINavigatorNode(Node):
                 # Log to database with classification
                 if self.enable_logging:
                     self.decision_db.log_obstacle_event(
-                        0,
+                        None,
                         highest_priority['x'],
                         highest_priority['y'],
                         highest_priority.get('distance', 0),

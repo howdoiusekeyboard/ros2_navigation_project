@@ -26,6 +26,8 @@ def render_diagram(mmd_file: Path, output_file: Path):
         mermaid_code = f.read()
         
     # Strictly validate Mermaid content instead of URL prefix to ensure only diagrams are processed
+    # Note: If new diagram types are added, manually update this list based on the official documentation:
+    # https://mermaid.js.org/intro/syntax-reference.html
     valid_keywords = ('graph', 'sequenceDiagram', 'classDiagram', 'stateDiagram', 'pie', 'gantt')
     
     # Strip comments and empty lines to find the actual diagram type

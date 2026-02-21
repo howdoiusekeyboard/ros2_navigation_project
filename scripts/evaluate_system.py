@@ -53,9 +53,9 @@ class SystemEvaluator:
                 # Strip potential IPv6 scope id
                 ip_clean = ip.split('%')[0]
                 if not ipaddress.ip_address(ip_clean).is_loopback:
-                     raise ValueError(f"Strict SSRF protection: Resolved IP '{ip}' is not a loopback address.")
+                     raise ValueError("Strict SSRF protection: Resolved backend IP is not a permitted loopback address.")
         except socket.gaierror:
-            raise ValueError(f"Strict SSRF protection: Could not resolve hostname '{hostname}'.")
+            raise ValueError("Strict SSRF protection: Could not resolve hostname.")
              
         self.backend_url = backend_url.rstrip("/")
         self.verbose = verbose
@@ -263,7 +263,8 @@ def main():
     results = evaluator.run_evaluation()
 
     # Sanitize output path against path injection
-    safe_output_path = Path.cwd() / args.output.name
+    safe_filename = os.path.basename(str(args.output))
+    safe_output_path = Path.cwd() / safe_filename
     with open(safe_output_path, "w") as f:
         json.dump(results, f, indent=2, default=str)
 

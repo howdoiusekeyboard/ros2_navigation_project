@@ -302,11 +302,13 @@ class ContextBuilder:
         Returns:
             (x, y) tuple or None if no coordinates found
         """
-        # Truncate text to max 250 characters to completely prevent polynomial ReDoS 
+        MAX_QUERY_LENGTH = 250
+
+        # Truncate text to max length to completely prevent polynomial ReDoS 
         # backtracking on excessively long malicious inputs.
-        if len(text) > 250:
-            logger.warning("Query exceeded length limit. Truncating to 250 characters to prevent ReDoS.")
-        text = text[:250]
+        if len(text) > MAX_QUERY_LENGTH:
+            logger.warning(f"Query exceeded length limit. Truncating to {MAX_QUERY_LENGTH} characters to prevent ReDoS.")
+        text = text[:MAX_QUERY_LENGTH]
         
         # Pattern 1: "2, 3" or "2.5, 3.1"
         coord_pattern_1 = r'(-?\d+(?:\.\d+)?)\s{0,5},\s{0,5}(-?\d+(?:\.\d+)?)'

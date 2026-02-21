@@ -40,6 +40,7 @@ class DecisionDatabase:
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.conn.execute('PRAGMA journal_mode=WAL')
         self.conn.execute('PRAGMA synchronous=NORMAL')
+        self.conn.execute('PRAGMA foreign_keys=ON')
 
         self._init_schema()
 
@@ -271,7 +272,7 @@ class DecisionDatabase:
 
     def log_path_change(
         self,
-        decision_id: int,
+        decision_id: Optional[int],
         old_length: float,
         new_length: float,
         max_deviation: float,
@@ -298,7 +299,7 @@ class DecisionDatabase:
 
     def log_obstacle_event(
         self,
-        decision_id: int,
+        decision_id: Optional[int],
         obstacle_x: float,
         obstacle_y: float,
         distance: float,
