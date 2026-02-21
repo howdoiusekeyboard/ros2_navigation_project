@@ -26,7 +26,14 @@ def render_diagram(mmd_file: Path, output_file: Path):
         
     # Strictly validate Mermaid content instead of URL prefix to ensure only diagrams are processed
     valid_keywords = ('graph', 'sequenceDiagram', 'classDiagram', 'stateDiagram', 'pie', 'gantt')
-    if not any(mermaid_code.strip().startswith(kw) for kw in valid_keywords):
+    
+    # Strip comments and empty lines to find the actual diagram type
+    cleaned_lines = [
+        line.strip() for line in mermaid_code.splitlines() 
+        if line.strip() and not line.strip().startswith('%%')
+    ]
+    
+    if not cleaned_lines or not any(cleaned_lines[0].startswith(kw) for kw in valid_keywords):
         print(f"✗ Invalid Mermaid content in {mmd_file.name}: Missing diagram keyword")
         return False
     

@@ -156,8 +156,14 @@ class DigitalTwinMonitorNode(Node):
             safe_base = os.path.abspath(os.path.expanduser('~/.ros/digital_twin'))
             resolved_path = os.path.abspath(self.model_path)
             
-            # Use strict path containment validation
-            if not Path(resolved_path).is_relative_to(Path(safe_base)):
+            # Use strict path containment validation (Python 3.8+ compatible)
+            try:
+                Path(resolved_path).relative_to(Path(safe_base))
+                is_relative = True
+            except ValueError:
+                is_relative = False
+                
+            if not is_relative:
                 self.get_logger().error("Invalid model path: refusing to read outside safe directory")
                 return
 
@@ -202,8 +208,14 @@ class DigitalTwinMonitorNode(Node):
             safe_base = os.path.abspath(os.path.expanduser('~/.ros/digital_twin'))
             resolved_path = os.path.abspath(self.model_path)
             
-            # Apply symmetric path containment validation
-            if not Path(resolved_path).is_relative_to(Path(safe_base)):
+            # Apply symmetric path containment validation (Python 3.8+ compatible)
+            try:
+                Path(resolved_path).relative_to(Path(safe_base))
+                is_relative = True
+            except ValueError:
+                is_relative = False
+                
+            if not is_relative:
                 self.get_logger().error("Invalid model path: refusing to write outside safe directory")
                 return
                 

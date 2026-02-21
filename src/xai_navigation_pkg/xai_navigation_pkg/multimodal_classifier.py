@@ -22,7 +22,7 @@ Based on Tesla FSD approach: "Eyes (camera) for identification, Radar (LiDAR) fo
 
 import math
 import time
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any, Optional
 from dataclasses import dataclass, field
 
 import rclpy
@@ -81,7 +81,7 @@ class FusedObstacle:
 
     # Reasoning for XAI
     reasoning: str = ''
-    contributing_factors: List[str] = field(default_factory=list)
+    contributing_factors: list[str] = field(default_factory=list)
 
 
 # Tesla-style class to priority type mapping
@@ -147,8 +147,10 @@ class MultiModalClassifier:
         self,
         camera_confidence_threshold: float = 0.4,
         fusion_distance_threshold: float = 0.5,
+        *,
         enable_intent_prediction: bool = True,
-        heuristic_classifier: Optional['ObstacleClassifier'] = None
+        heuristic_classifier: Optional['ObstacleClassifier'] = None,
+        **kwargs
     ):
         """
         Initialize multi-modal classifier.
@@ -169,29 +171,29 @@ class MultiModalClassifier:
             self.heuristic_classifier = ObstacleClassifier()
 
         # Track previous obstacle positions for velocity estimation
-        self._previous_obstacles: Dict[str, Tuple[float, float, float, float]] = {}
+        self._previous_obstacles: dict[str, tuple[float, float, float, float]] = {}
 
         # Camera intrinsic parameters (TurtleBot3 Waffle Intel RealSense R200)
         # These are approximate values - should be calibrated for accuracy
-        self.camera_fx = 554.25  # Focal length x
-        self.camera_fy = 554.25  # Focal length y
-        self.camera_cx = 320.5   # Principal point x
-        self.camera_cy = 240.5   # Principal point y
-        self.camera_width = 640
-        self.camera_height = 480
+        self.camera_fx = kwargs.get('camera_fx', 554.25)  # Focal length x
+        self.camera_fy = kwargs.get('camera_fy', 554.25)  # Focal length y
+        self.camera_cx = kwargs.get('camera_cx', 320.5)   # Principal point x
+        self.camera_cy = kwargs.get('camera_cy', 240.5)   # Principal point y
+        self.camera_width = kwargs.get('camera_width', 640)
+        self.camera_height = kwargs.get('camera_height', 480)
 
         # Camera pose relative to robot base
-        self.camera_height_m = 0.287  # TurtleBot3 Waffle camera height
-        self.camera_pitch = 0.0       # Camera tilt angle
+        self.camera_height_m = kwargs.get('camera_height_m', 0.287)  # TurtleBot3 Waffle camera height
+        self.camera_pitch = kwargs.get('camera_pitch', 0.0)       # Camera tilt angle
 
     def fuse_detections(
         self,
-        lidar_obstacles: List[Dict[str, Any]],
-        vision_detections: Optional[List[Any]] = None,
-        robot_pose: Optional[Tuple[float, float, float]] = None,
-        robot_velocity: Optional[Tuple[float, float]] = None,
+        lidar_obstacles: list[dict[str, Any]],
+        vision_detections: Optional[list[Any]] = None,
+        robot_pose: Optional[tuple[float, float, float]] = None,
+        robot_velocity: Optional[tuple[float, float]] = None,
         dt: float = 0.1
-    ) -> List[FusedObstacle]:
+    ) -> list[FusedObstacle]:
         """
         Fuse LiDAR obstacles with camera detections.
 
@@ -266,8 +268,8 @@ class MultiModalClassifier:
         self,
         obs_x: float,
         obs_y: float,
-        detections: List[Any],
-        robot_pose: Tuple[float, float, float]
+        detections: list[Any],
+        robot_pose: tuple[float, float, float]
     ) -> Optional[Any]:
         """
         Find camera detection that matches LiDAR obstacle position.
@@ -311,8 +313,8 @@ class MultiModalClassifier:
         self,
         world_x: float,
         world_y: float,
-        robot_pose: Tuple[float, float, float]
-    ) -> Tuple[Optional[float], Optional[float]]:
+        robot_pose: tuple[float, float, float]
+    ) -> tuple[Optional[float], Optional[float]]:
         """
         Project world coordinates to image pixel coordinates.
 
@@ -350,7 +352,7 @@ class MultiModalClassifier:
 
     def _create_camera_fused_obstacle(
         self,
-        lidar_obs: Dict[str, Any],
+        lidar_obs: dict[str, Any],
         vision_detection: Any,
         distance: float,
         velocity: Optional[float],
@@ -401,7 +403,7 @@ class MultiModalClassifier:
 
     def _create_heuristic_obstacle(
         self,
-        lidar_obs: Dict[str, Any],
+        lidar_obs: dict[str, Any],
         distance: float,
         velocity: Optional[float],
         vx: Optional[float],
@@ -471,8 +473,8 @@ class MultiModalClassifier:
     def _predict_intent(
         self,
         obstacle: FusedObstacle,
-        robot_pose: Tuple[float, float, float],
-        robot_velocity: Tuple[float, float]
+        robot_pose: tuple[float, float, float],
+        robot_velocity: tuple[float, float]
     ):
         """
         Predict obstacle intent based on velocity vectors.
@@ -558,7 +560,7 @@ class MultiModalClassifier:
         y: float,
         current_time: float,
         dt: float
-    ) -> Tuple[Optional[float], Optional[float], Optional[float]]:
+    ) -> tuple[Optional[float], Optional[float], Optional[float]]:
         """Estimate velocity from position history."""
 
         if obs_id not in self._previous_obstacles:
@@ -613,19 +615,44 @@ class MultiModalClassifierNode(Node):
         self.declare_parameter('enable_intent_prediction', True)
         self.declare_parameter('update_rate', 10.0)
 
+        self.declare_parameter('camera_fx', 554.25)
+        self.declare_parameter('camera_fy', 554.25)
+        self.declare_parameter('camera_cx', 320.5)
+        self.declare_parameter('camera_cy', 240.5)
+        self.declare_parameter('camera_width', 640)
+        self.declare_parameter('camera_height', 480)
+        self.declare_parameter('camera_height_m', 0.287)
+        self.declare_parameter('camera_pitch', 0.0)
+
         # Get parameters
         camera_conf = self.get_parameter('camera_confidence_threshold').value
         fusion_dist = self.get_parameter('fusion_distance_threshold').value
         enable_intent = self.get_parameter('enable_intent_prediction').value
+        camera_fx = self.get_parameter('camera_fx').value
+        camera_fy = self.get_parameter('camera_fy').value
+        camera_cx = self.get_parameter('camera_cx').value
+        camera_cy = self.get_parameter('camera_cy').value
+        camera_width = self.get_parameter('camera_width').value
+        camera_height = self.get_parameter('camera_height').value
+        camera_height_m = self.get_parameter('camera_height_m').value
+        camera_pitch = self.get_parameter('camera_pitch').value
 
         # Initialize classifier
         self.classifier = MultiModalClassifier(
             camera_confidence_threshold=camera_conf,
             fusion_distance_threshold=fusion_dist,
-            enable_intent_prediction=enable_intent
+            enable_intent_prediction=enable_intent,
+            camera_fx=camera_fx,
+            camera_fy=camera_fy,
+            camera_cx=camera_cx,
+            camera_cy=camera_cy,
+            camera_width=camera_width,
+            camera_height=camera_height,
+            camera_height_m=camera_height_m,
+            camera_pitch=camera_pitch
         )
 
-        self.latest_detections: Optional[List] = None
+        self.latest_detections: Optional[list] = None
         self.latest_costmap: Optional[OccupancyGrid] = None
 
         # QoS for sensor data

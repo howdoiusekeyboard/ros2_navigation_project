@@ -51,9 +51,15 @@ class ConversationDatabase:
             
         resolved_path = (base_path / 'data' / sanitized_filename).resolve()
         
-        # Robust path traversal immunity using pathlib checks rather than string prefixes
-        if not resolved_path.is_relative_to(base_path / 'data'):
-             raise ValueError("Invalid database path for conversation history: Path traversal detected")
+        # Robust path traversal immunity using backward-compatible checks
+        try:
+            resolved_path.relative_to(base_path / 'data')
+            is_relative = True
+        except ValueError:
+            is_relative = False
+            
+        if not is_relative:
+            raise ValueError("Invalid database path for conversation history: Path traversal detected")
              
         self.db_path = resolved_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)

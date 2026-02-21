@@ -168,9 +168,10 @@ class YoloClassSetter(Node):
                 f'Class mapping: {self.class_to_priority_type}'
             )
 
-        except Exception as e:
-            self.get_logger().error(f'Failed to set classes: {e}')
-            # Will retry on next timer tick
+        except Exception as e: # noqa: BLE001
+            # future.result() raises for service errors; keep broad catch
+            # only here to ensure retry continues under any failure mode.
+            self.get_logger().error(f'Failed to set classes ({type(e).__name__}): {e}')
 
     def get_priority_type(self, class_name: str) -> str:
         """
