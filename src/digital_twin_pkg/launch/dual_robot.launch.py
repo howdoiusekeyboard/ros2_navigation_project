@@ -56,11 +56,15 @@ def generate_launch_description():
         )
         turtlebot3_model = _DEFAULT_TB3_MODEL
 
-    urdf_file = os.path.join(
+    urdf_file = os.path.abspath(os.path.join(
         pkg_turtlebot3_gazebo,
         'urdf',
         f'turtlebot3_{turtlebot3_model}.urdf'
-    )
+    ))
+    
+    urdf_safe_dir = os.path.abspath(os.path.join(pkg_turtlebot3_gazebo, 'urdf'))
+    if os.path.commonpath([urdf_safe_dir, urdf_file]) != urdf_safe_dir:
+        raise ValueError(f"Path traversal detected for model: {turtlebot3_model}")
 
     # Read URDF content once to prevent file handle leaks
     with open(urdf_file, 'r') as _f:

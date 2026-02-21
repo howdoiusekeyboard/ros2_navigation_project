@@ -43,25 +43,20 @@ class ConversationDatabase:
         """
         # Resolve path relative to backend directory
         base_path = Path(__file__).parent.parent.parent.resolve()
+        data_dir_str = os.path.abspath(str(base_path / 'data'))
         
         # Defuse path injection by aggressively sanitizing user input
         sanitized_filename = os.path.basename(str(db_path))
         if not sanitized_filename or sanitized_filename in ('.', '..'):
-            sanitized_filename = 'conversations.db'
+            raise ValueError("Missing or invalid db_path")
             
-        resolved_path = (base_path / 'data' / sanitized_filename).resolve()
+        resolved_path_str = os.path.abspath(os.path.join(data_dir_str, sanitized_filename))
         
         # Robust path traversal immunity using backward-compatible checks
-        try:
-            resolved_path.relative_to(base_path / 'data')
-            is_relative = True
-        except ValueError:
-            is_relative = False
-            
-        if not is_relative:
+        if os.path.commonpath([data_dir_str, resolved_path_str]) != data_dir_str:
             raise ValueError("Invalid database path for conversation history: Path traversal detected")
              
-        self.db_path = resolved_path
+        self.db_path = Path(resolved_path_str)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         self._connection: Optional[aiosqlite.Connection] = None
@@ -467,7 +462,7 @@ class ConversationDatabase:
         await self._connection.commit()
 
         deleted_count = cursor.rowcount
-        logger.info(f"Cleaned up {deleted_count} old conversation turns")
+        logger.info("Cleaned up %s old conversation turns", deleted_count)
 
         return deleted_count
 

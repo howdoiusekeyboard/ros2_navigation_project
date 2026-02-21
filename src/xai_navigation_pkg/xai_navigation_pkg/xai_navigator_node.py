@@ -337,6 +337,9 @@ class XAINavigatorNode(Node):
         if not self.enable_logging:
             return
             
+        if self.session_id is None:
+            return
+            
         snapshot = self.telemetry_monitor.get_snapshot()
         
         try:

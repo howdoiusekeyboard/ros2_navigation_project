@@ -286,6 +286,7 @@ class MultiModalClassifier:
         if pixel_x is None or pixel_y is None:
             return None
 
+        matches = []
         # Find matching detection
         for detection in detections:
             if not hasattr(detection, 'bbox'):
@@ -304,9 +305,15 @@ class MultiModalClassifier:
 
             if x_min <= pixel_x <= x_max and y_min <= pixel_y <= y_max:
                 # Check confidence threshold
-                if detection.score >= self.camera_confidence_threshold:
-                    return detection
+                if hasattr(detection, 'score') and detection.score >= self.camera_confidence_threshold:
+                    matches.append(detection)
+                elif hasattr(detection, 'confidence') and detection.confidence >= self.camera_confidence_threshold:
+                    matches.append(detection)
 
+        if matches:
+            # Return match with highest confidence
+            return max(matches, key=lambda m: getattr(m, 'score', getattr(m, 'confidence', 0.0)))
+            
         return None
 
     def _world_to_image(

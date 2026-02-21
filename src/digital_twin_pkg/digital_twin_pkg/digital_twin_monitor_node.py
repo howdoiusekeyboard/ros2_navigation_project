@@ -173,7 +173,10 @@ class DigitalTwinMonitorNode(Node):
             class SafeUnpickler(pickle.Unpickler):
                 def find_class(self, module, name):
                     # Strict whitelist of allowed modules for scikit-learn models
-                    allowed_builtins = {'tuple', 'list', 'dict', 'set', 'frozenset', 'int', 'float', 'str', 'bytes', 'bool'}
+                    allowed_builtins = {
+                        'tuple', 'list', 'dict', 'set', 'frozenset', 'int', 'float', 
+                        'str', 'bytes', 'bool', 'object', 'type', 'slice'
+                    }
                     
                     if module == 'builtins' and name in allowed_builtins:
                         return super().find_class(module, name)
@@ -312,7 +315,7 @@ class DigitalTwinMonitorNode(Node):
             # Approximate theta from quaternion (assumes 2D)
             real_theta = 2 * math.atan2(real_orient.z, real_orient.w)
             twin_theta = 2 * math.atan2(twin_orient.z, twin_orient.w)
-            features['orientation_diff'] = real_theta - twin_theta
+            features['orientation_diff'] = (real_theta - twin_theta + math.pi) % (2 * math.pi) - math.pi
 
             # Velocity differences
             real_vel = self.real_odom.twist.twist

@@ -6,6 +6,7 @@ import os
 import base64
 import requests
 import json
+import urllib.parse
 from pathlib import Path
 
 def encode_mermaid(mermaid_code: str) -> str:
@@ -37,11 +38,12 @@ def render_diagram(mmd_file: Path, output_file: Path):
         print(f"✗ Invalid Mermaid content in {mmd_file.name}: Missing diagram keyword")
         return False
     
-    # Encode for API (urllib.parse.quote is unnecessary for base64url)
+    # Encode for API and ensure valid URL construction to prevent SSRF
     encoded = encode_mermaid(mermaid_code)
+    safe_payload = urllib.parse.quote(encoded, safe="")
     
-    # Try mermaid.ink API
-    api_url = f"https://mermaid.ink/img/{encoded}"
+    # Try mermaid.ink API with static prefix
+    api_url = "https://mermaid.ink/img/" + safe_payload
     
     try:
         response = requests.get(api_url, timeout=30)
@@ -53,7 +55,13 @@ def render_diagram(mmd_file: Path, output_file: Path):
         else:
             print(f"✗ API returned status {response.status_code}")
             return False
-    except Exception as e:
+    except requests.Timeout:
+        print(f"✗ Error: Request to mermaid.ink timed out for {mmd_file.name}")
+        return False
+    except requests.ConnectionError:
+        print(f"✗ Error: Connection failed while reaching mermaid.ink for {mmd_file.name}")
+        return False
+    except requests.RequestException as e:
         print(f"✗ Error rendering {mmd_file.name}: {e}")
         return False
 

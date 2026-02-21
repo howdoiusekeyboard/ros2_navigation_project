@@ -117,12 +117,18 @@ def generate_synthetic_training_data(n_normal: int = 5000, n_anomaly: int = 500)
 
 def load_training_data(data_path: str) -> pd.DataFrame:
     """Load training data from CSV file."""
-    if not os.path.exists(data_path):
-        print(f"WARNING: Data file not found at {data_path}")
+    safe_dir = os.path.expanduser('~/.ros')
+    resolved_path = os.path.abspath(data_path)
+    if os.path.commonpath([safe_dir, resolved_path]) != safe_dir:
+        print(f"ERROR: Data path must be within {safe_dir} to prevent path traversal.")
+        sys.exit(1)
+
+    if not os.path.exists(resolved_path):
+        print(f"WARNING: Data file not found at {resolved_path}")
         print("Generating synthetic training data instead...")
         return generate_synthetic_training_data()
 
-    df = pd.read_csv(data_path)
+    df = pd.read_csv(resolved_path)
 
     # Validate columns
     missing_cols = set(FEATURE_NAMES) - set(df.columns)
@@ -250,7 +256,13 @@ def save_model(
     output_path: str
 ):
     """Save trained model, scaler, and metadata."""
-    output_dir = Path(output_path)
+    safe_dir = os.path.expanduser('~/.ros')
+    resolved_path = os.path.abspath(output_path)
+    if os.path.commonpath([safe_dir, resolved_path]) != safe_dir:
+        print(f"ERROR: Output path must be within {safe_dir} to prevent path traversal.")
+        sys.exit(1)
+
+    output_dir = Path(resolved_path)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     model_file = output_dir / 'isolation_forest_model.pkl'

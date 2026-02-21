@@ -304,6 +304,8 @@ class ContextBuilder:
         """
         # Truncate text to max 250 characters to completely prevent polynomial ReDoS 
         # backtracking on excessively long malicious inputs.
+        if len(text) > 250:
+            logger.warning("Query exceeded length limit. Truncating to 250 characters to prevent ReDoS.")
         text = text[:250]
         
         # Pattern 1: "2, 3" or "2.5, 3.1"

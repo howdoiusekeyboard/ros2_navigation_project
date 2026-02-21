@@ -67,7 +67,7 @@ echo "[5/6] XAI Navigator..."
 tmux new-window -t $SESSION -n 'XAI'
 tmux send-keys -t $SESSION:4 "sleep 40" C-m
 tmux send-keys -t $SESSION:4 "$SETUP_CMD" C-m
-tmux send-keys -t $SESSION:4 "if [ -f backend/.env ]; then set -o allexport; source backend/.env; set +o allexport; fi; if [ -z \"\$GEMINI_API_KEY\" ]; then echo 'ERROR: GEMINI_API_KEY is empty'; exit 1; fi" C-m
+tmux send-keys -t $SESSION:4 "if [ -f backend/.env ]; then export GEMINI_API_KEY=\$(grep -E '^GEMINI_API_KEY=' backend/.env | cut -d '=' -f2 | tr -d '\"' | tr -d \"'\"); fi; if [ -z \"\$GEMINI_API_KEY\" ]; then echo 'ERROR: GEMINI_API_KEY is empty'; exit 1; fi" C-m
 tmux send-keys -t $SESSION:4 "ros2 launch xai_navigation_pkg xai_navigator.launch.py enable_explanations:=true enable_obstacle_weighting:=true gemini_api_key:=\$GEMINI_API_KEY" C-m
 
 # Window 5: YOLO (CPU MODE - GPU incompatible, fallback to CPU)
