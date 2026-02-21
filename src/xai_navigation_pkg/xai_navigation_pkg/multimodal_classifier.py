@@ -601,7 +601,7 @@ class MultiModalClassifierNode(Node):
     - /odom or /robot_pose (for velocity)
 
     Publishes:
-    - /multimodal/classifications (custom message TBD)
+    - Not currently publishing (Publishing loop and custom message TBD)
     """
 
     def __init__(self):

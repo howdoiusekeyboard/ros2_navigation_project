@@ -218,11 +218,11 @@ class ConversationDatabase:
                 session_id, location_label, location_x, location_y, location_label
             )
 
-        safe_session = repr(str(session_id))
-        safe_input = repr(str(user_input[:50]))
+        safe_session = repr(session_id)
+        safe_input = repr(user_input[:50])
         logger.debug(
-            f"Stored turn {turn_number} for session {safe_session}: "
-            f"{safe_input}... (ID: {turn_id})"
+            "Stored turn %s for session %s: %s... (ID: %s)",
+            turn_number, safe_session, safe_input, turn_id
         )
 
         return turn_id
@@ -439,8 +439,8 @@ class ConversationDatabase:
             del self._spatial_cache[session_id]
 
         deleted_count = cursor.rowcount
-        safe_session = repr(str(session_id))
-        logger.info(f"Soft deleted {deleted_count} turns from session {safe_session}")
+        safe_session = repr(session_id)
+        logger.info("Soft deleted %s turns from session %s", deleted_count, safe_session)
 
         return deleted_count > 0
 
