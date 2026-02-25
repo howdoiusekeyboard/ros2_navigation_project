@@ -129,7 +129,7 @@ ros_llm:
 ```python
 # Configuration-based initialization
 CONFIG = {
-    "model": "gemini-2.0-flash-exp",
+    "model": "gemini-2.5-flash",
     "history_length": 10,
     "context_fields": ["location", "last_action", "user_preferences"],
     "safety_checks": True
@@ -234,7 +234,7 @@ def cached_parse(self, command):
 **Key Features:**
 - JSON Schema support with Pydantic
 - Guaranteed format compliance
-- Supported by Gemini 2.0 Flash, 2.5 Pro/Flash
+- Supported by Gemini 2.5 Flash, 2.5 Pro/Flash
 
 **Implementation Pattern:**
 ```python
@@ -248,7 +248,7 @@ class RobotCommand(BaseModel):
 
 client = genai.Client()
 response = client.models.generate_content(
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",
     contents=user_command,
     config={
         "response_mime_type": "application/json",

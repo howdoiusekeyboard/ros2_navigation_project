@@ -9,7 +9,7 @@
 A **functional voice-controlled robot system** with:
 - ✅ ROS2 Humble Nav2 navigation stack (fully built)
 - ✅ Web dashboard with voice input (MediaRecorder → Backend OpenAI Speech-to-Text)
-- ✅ Gemini 2.0 Flash integration for command parsing
+- ✅ Gemini 2.5 Flash integration for command parsing
 - ✅ Real-time ROS2 communication via rosbridge
 - ✅ Fallback regex parser (works even without Gemini API)
 
@@ -114,7 +114,7 @@ This ensures basic functionality even offline or with API issues.
    - Singleton pattern for single WebSocket connection
 
 2. **geminiService.ts** - Natural language command parsing
-   - Uses Gemini 2.0 Flash Experimental model
+   - Uses Gemini 2.5 Flash Experimental model
    - Temperature: 0.3 (low for deterministic parsing)
    - Structured output with JSON schema validation
    - Built-in fallback parser for offline operation
@@ -299,7 +299,7 @@ rm -rf node_modules dist
 ### ✅ What Works NOW
 
 - **Voice input:** MediaRecorder → Backend OpenAI Speech-to-Text
-- **Command parsing:** Gemini 2.0 Flash + fallback regex
+- **Command parsing:** Gemini 2.5 Flash + fallback regex
 - **Robot control:** Twist messages to `/turtle1/cmd_vel`
 - **Status monitoring:** ROS connection, processing state
 - **Error handling:** User-friendly messages, graceful degradation

@@ -119,7 +119,7 @@ Dr. Sujala D. Shetty's recent publications (548 citations, 23 years experience):
 
 3. **Gemini underrepresented**
    - Most papers focus on GPT-3.5/GPT-4
-   - **Our contribution:** Cost-effective Gemini 2.0 Flash integration
+   - **Our contribution:** Cost-effective Gemini 2.5 Flash integration
 
 4. **User studies lacking**
    - Technical demos without human evaluation

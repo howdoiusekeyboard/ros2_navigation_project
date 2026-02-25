@@ -18,7 +18,7 @@ graph TB
 
     subgraph Backend Services
         WHISPER[Whisper API<br/>Speech-to-Text]
-        GEMINI[Gemini 2.0 Flash<br/>Command Parsing]
+        GEMINI[Gemini 2.5 Flash<br/>Command Parsing]
         FASTAPI[FastAPI Server<br/>REST + WebSocket]
     end
 
@@ -375,7 +375,7 @@ Digital Twin + Anomaly Detection (NEW)
 | Styling | Tailwind CSS | UI design |
 | Icons | lucide-react | Visual elements |
 | Backend | FastAPI (Python) | REST/WebSocket server |
-| LLM | Gemini 2.0 Flash | Command parsing |
+| LLM | Gemini 2.5 Flash | Command parsing |
 | STT | Whisper API | Speech recognition |
 | ROS2 | Humble Hawksbill | Robot middleware |
 | Navigation | Nav2 | Path planning |

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a complete ROS 2 Humble autonomous navigation system with an integrated React-based web dashboard. The project demonstrates the full navigation pipeline: SLAM mapping → localization → path planning, designed for TurtleBot3 in Gazebo simulation.
 
 **Intelligent Systems Layer:** This project extends Nav2 with:
-- **Explainable AI (XAI)**: Natural language explanations of navigation decisions via Gemini 2.0 Flash
+- **Explainable AI (XAI)**: Natural language explanations of navigation decisions via Gemini 2.5 Flash
 - **Decision Logging**: SQLite database capturing all Nav2 events with zero-latency impact
 - **Conversation Memory**: Multi-turn dialogue with spatial reference resolution ("go back to the kitchen")
 - **Backend API**: FastAPI server providing unified data layer and voice command parsing
@@ -183,12 +183,12 @@ Key parameters (NO magic numbers in code):
 The FastAPI backend provides a unified HTTP/WebSocket API layer that bridges the web dashboard, voice control, and ROS2 systems.
 
 **Location:** `backend/`
-**Tech Stack:** FastAPI + Async SQLite + Gemini 2.0 Flash + Loguru logging
+**Tech Stack:** FastAPI + Async SQLite + Gemini 2.5 Flash + Loguru logging
 
 ### Core Services
 
 **1. Gemini Command Parser** (`app/services/gemini_service.py`)
-- **Model:** `gemini-2.0-flash-exp` (low latency, cost-effective)
+- **Model:** `gemini-2.5-flash` (low latency, cost-effective)
 - **Temperature:** 0.3 (deterministic parsing for robot commands)
 - **Input:** Natural language text from voice transcription
 - **Output:** `RobotCommand(action, parameters, confidence, reasoning)`
@@ -262,7 +262,7 @@ ROS_DOMAIN_ID=0                                    # Must match ROS2 network
 
 ## Explanation System (Week 4 Integration)
 
-The explanation system generates natural language descriptions of navigation decisions using Gemini 2.0 Flash.
+The explanation system generates natural language descriptions of navigation decisions using Gemini 2.5 Flash.
 
 ### How Explanations Work
 
@@ -489,7 +489,7 @@ The `default_nav_to_pose_bt_xml` parameter in `bt_navigator.yaml` requires an ab
 
 ### backend/ (FastAPI Server)
 - **Purpose:** Unified backend for voice control, conversation memory, and XAI data
-- **Tech:** FastAPI + SQLite (aiosqlite) + Gemini 2.0 Flash + Loguru logging
+- **Tech:** FastAPI + SQLite (aiosqlite) + Gemini 2.5 Flash + Loguru logging
 - **Key files:**
   - `app/main.py` - Main API with all endpoints (1091 lines)
   - `app/services/gemini_service.py` - Command parser with safety validation
@@ -1033,5 +1033,5 @@ pip install -r requirements.txt
 
 **Critical Version Notes:**
 - Python 3.10 required for backend `match` statements and modern type hints
-- Gemini SDK 0.3.0+ required for `gemini-2.0-flash-exp` model access
+- Gemini SDK 0.3.0+ required for `gemini-2.5-flash` model access
 - SQLite 3.35+ required for WAL mode concurrent access patterns

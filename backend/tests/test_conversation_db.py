@@ -344,7 +344,7 @@ async def test_metadata_storage(temp_db):
     metadata = {
         "source": "voice",
         "language": "en",
-        "model": "gemini-2.0-flash"
+        "model": "gemini-2.5-flash"
     }
 
     await temp_db.add_turn(

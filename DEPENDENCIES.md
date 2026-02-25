@@ -1,4 +1,4 @@
-# 📦 Complete Dependencies List
+# Complete Dependencies List
 
 **Purpose:** Complete inventory of all system packages, libraries, and tools required to build and run this project.  
 **Use Case:** Fresh system setup, disaster recovery, Docker image creation.  
@@ -6,7 +6,7 @@
 
 ---
 
-## 🖥️ System Requirements
+## System Requirements
 
 ### Operating System
 
@@ -35,7 +35,7 @@
 
 ---
 
-## 🤖 ROS2 Dependencies
+## ROS2 Dependencies
 
 ### Core ROS2 Installation
 
@@ -153,7 +153,7 @@ rosdep update
 
 ---
 
-## 🐍 Python Dependencies
+## Python Dependencies
 
 ### System Python Packages
 
@@ -238,7 +238,7 @@ sudo apt install -y \
 
 ---
 
-## 📦 Node.js / Bun Dependencies
+## Node.js / Bun Dependencies
 
 ### Bun Runtime (Recommended)
 
@@ -302,7 +302,7 @@ npm install
 
 ---
 
-## 🛠️ System Tools & Utilities
+## System Tools & Utilities
 
 ### Build Tools
 
@@ -361,7 +361,7 @@ sudo apt install -y \
 
 ---
 
-## 🎮 Simulation & Visualization
+## Simulation & Visualization
 
 ### Gazebo Classic 11
 
@@ -403,7 +403,7 @@ sudo apt install -y \
 
 ---
 
-## 🔧 Optional Dependencies
+## Optional Dependencies
 
 ### Database (PostgreSQL - for production)
 
@@ -461,7 +461,7 @@ sudo apt install -y \
 
 ---
 
-## 🔑 API Keys Required
+## API Keys Required
 
 ### OpenAI API
 
@@ -481,7 +481,7 @@ sudo apt install -y \
 
 ---
 
-## 📊 Dependency Size Breakdown
+## Dependency Size Breakdown
 
 | Category | Size | Notes |
 |----------|------|-------|
@@ -495,7 +495,7 @@ sudo apt install -y \
 
 ---
 
-## 🔄 Version Compatibility Matrix
+## Version Compatibility Matrix
 
 | Dependency | Version | Compatible With | Notes |
 |-----------|---------|-----------------|-------|
@@ -510,7 +510,7 @@ sudo apt install -y \
 
 ---
 
-## 🐳 Docker Alternative (Future)
+## Docker Alternative (Future)
 
 **Status:** Not yet implemented (Week 5-8)
 
@@ -532,7 +532,7 @@ sudo apt install -y \
 
 ---
 
-## 📝 Installation Quick Reference
+## Installation Quick Reference
 
 ### Complete Fresh Install (Ubuntu 22.04)
 
@@ -594,7 +594,7 @@ echo "✅ All dependencies installed! Ready to clone repository."
 
 ---
 
-## 🧪 Verify Installation
+## Verify Installation
 
 ```bash
 # Check ROS2
@@ -626,7 +626,7 @@ colcon --help
 
 ---
 
-## 📞 Troubleshooting
+## Troubleshooting
 
 ### Issue: "ros2: command not found"
 

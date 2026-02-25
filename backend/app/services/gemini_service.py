@@ -104,13 +104,13 @@ class GeminiCommandParser:
     MAX_DISTANCE = 5.0  # meters (safety limit)
     MAX_ANGLE = 6.28  # radians (2π, full rotation)
 
-    def __init__(self, api_key: str, model_name: str = "gemini-2.5-flash-preview-09-2025"):
+    def __init__(self, api_key: str, model_name: str = "gemini-2.5-flash"):
         """
         Initialize Gemini parser
 
         Args:
             api_key: Google AI API key
-            model_name: Gemini model to use (default: gemini-2.5-flash-preview-09-2025)
+            model_name: Gemini model to use (default: gemini-2.5-flash)
         """
         self.api_key = api_key
         self.model_name = model_name
@@ -456,7 +456,7 @@ Now parse this command and return ONLY the JSON output:
 gemini_parser: Optional[GeminiCommandParser] = None
 
 
-def initialize_gemini(api_key: str, model_name: str = "gemini-2.5-flash-preview-09-2025"):
+def initialize_gemini(api_key: str, model_name: str = "gemini-2.5-flash"):
     """Initialize global Gemini parser"""
     global gemini_parser
     gemini_parser = GeminiCommandParser(api_key=api_key, model_name=model_name)

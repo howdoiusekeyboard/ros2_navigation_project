@@ -59,7 +59,7 @@ Transformed a 20%-complete academic project into a **fully functional voice-cont
 **Purpose:** Natural language command parsing with Gemini AI
 
 **Features:**
-- Gemini 2.0 Flash Experimental integration
+- Gemini 2.5 Flash Experimental integration
 - Temperature: 0.3 (deterministic parsing)
 - Structured JSON output with schema validation
 - **Hybrid architecture:** Fallback regex parser when API unavailable
@@ -174,7 +174,7 @@ Transformed a 20%-complete academic project into a **fully functional voice-cont
 └───────────────┬───────────────────────────────────────┘
                 ▼
 ┌───────────────────────────────────────────────────────┐
-│ Gemini 2.0 Flash (geminiService.ts)                   │
+│ Gemini 2.5 Flash (geminiService.ts)                   │
 │ - Receives: "spin in a circle"                        │
 │ - Parses with LLM + system prompt                     │
 │ - Returns JSON: {                                     │
@@ -222,7 +222,7 @@ Transformed a 20%-complete academic project into a **fully functional voice-cont
 - Decoupled architecture
 
 **3. Hybrid Parsing Approach**
-- Primary: Gemini 2.0 Flash (natural language understanding)
+- Primary: Gemini 2.5 Flash (natural language understanding)
 - Fallback: Regex parser (handles simple commands offline)
 - **Why:** Reliability > sophistication. System works even when API is down.
 
@@ -264,7 +264,7 @@ Transformed a 20%-complete academic project into a **fully functional voice-cont
 ✅ Build artifacts (compiled & ready)
 ✅ All dependencies installed
 ✅ ROS integration (3-service architecture)
-✅ Gemini 2.0 Flash integration
+✅ Gemini 2.5 Flash integration
 ✅ OpenAI Speech-to-Text integration (backend)
 ✅ Emergency stop functionality
 ✅ Error handling & graceful degradation
@@ -374,7 +374,7 @@ Based on architecture:
 | Stage | Time | Cumulative |
 |-------|------|------------|
 | Voice input (MediaRecorder + backend STT) | 300-1500ms | 1500ms |
-| Gemini 2.0 Flash API | 300-500ms | 800ms |
+| Gemini 2.5 Flash API | 300-500ms | 800ms |
 | ROS publish | 10-50ms | 850ms |
 | Robot execution | 0ms (start) | **850ms total** |
 

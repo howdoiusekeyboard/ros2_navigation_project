@@ -6,11 +6,11 @@
 2.  **Explainable AI (XAI) Navigation:** Natural language explanations for robot decisions.
 3.  **Digital Twin Anomaly Detection:** Real-time behavioral monitoring using a parallel simulation.
 
-This project extends a previous "Voice-Controlled ROS 2 Navigation" system, integrating Google's **Gemini 2.0 Flash** for high-level reasoning and command parsing.
+This project extends a previous "Voice-Controlled ROS 2 Navigation" system, integrating Google's **Gemini 2.5 Flash** for high-level reasoning and command parsing.
 
 ### Key Technologies
 *   **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, `roslib` (WebSocket).
-*   **Backend:** Python 3.10+, FastAPI, Google Gemini 2.0 Flash, OpenAI Whisper.
+*   **Backend:** Python 3.10+, FastAPI, Google Gemini 2.5 Flash, OpenAI Whisper.
 *   **Robotics:** ROS 2 Humble Hawksbill, Nav2, Gazebo 11, TurtleBot3 (Waffle Pi).
 *   **AI/ML:** Gemini API (Reasoning), YOLOv8 (Perception), Scikit-learn (Anomaly Detection).
 

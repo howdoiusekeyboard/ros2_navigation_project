@@ -1121,7 +1121,7 @@ async def startup_event():
         if settings.gemini_api_key:
             logger.info("Initializing Gemini Command Parser...")
             # Use Gemini 2.5 Flash (September 2025 preview) for better performance
-            initialize_gemini(api_key=settings.gemini_api_key, model_name="gemini-2.5-flash-preview-09-2025")
+            initialize_gemini(api_key=settings.gemini_api_key, model_name="gemini-2.5-flash")
             logger.info("✅ Gemini Command Parser initialized successfully")
         else:
             logger.warning("⚠️ GEMINI_API_KEY not set - command parsing will fail")
